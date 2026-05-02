@@ -1,0 +1,179 @@
+# ------------------------------------------------------------
+# Universal branch-switch-safe .gitignore
+# Intended for monorepos or repos with many language branches.
+# ------------------------------------------------------------
+
+# --- OS clutter ---
+.DS_Store
+.DS_Store?
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100/
+.Trashes/
+._*
+
+# --- Editor / IDE ---
+.idea/
+.vscode/
+.vs/
+*.iml
+*.suo
+*.user
+*.userossc
+*.sln.docstates
+*.swp
+*.swo
+*~
+
+# --- Logs / temp ---
+*.log
+*.out
+*.err
+*.pid
+*.seed
+*.tmp
+*.temp
+tmp/
+temp/
+
+# --- Env / local secrets ---
+.env
+.env.*
+!.env.example
+!.env*.example
+!.env.template
+!.env*.template
+
+# --- Archives / binaries ---
+*.7z
+*.gz
+*.zip
+*.tar
+*.tgz
+*.bz2
+*.rar
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+
+# --- Node / JS / TS ---
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+.turbo/
+.parcel-cache/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+vite.svg
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+.python-version
+.venv/
+venv/
+env/
+ENV/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.nox/
+.hypothesis/
+.pyre/
+site/
+htmlcov/
+.ipynb_checkpoints/
+
+# --- Java / Kotlin / JVM ---
+.gradle/
+out/
+target/
+
+# --- .NET / C# ---
+bin/
+obj/
+
+# --- Go ---
+*.test
+coverage.out
+
+# --- Rust ---
+target/
+
+# --- Ruby ---
+.bundle/
+vendor/bundle/
+
+# --- PHP / Composer ---
+vendor/
+
+# --- Elixir / Erlang ---
+_build/
+deps/
+.elixir_ls/
+
+# --- C / C++ / CMake ---
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+Makefile
+makedep*
+libtool
+aclocal.m4
+m4/
+autom4te.cache/
+
+# --- Swift / Xcode ---
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcuserdatad/
+*.xcuserstate
+
+# --- Flutter / Dart ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# --- Terraform / cloud tooling ---
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# --- Serverless ---
+.serverless/
+.aws-sam/
+
+# --- Container / local runtime leftovers ---
+.docker/
+
+# --- Generic cache dirs ---
+.cache/
+.eslintcache
+.sass-cache/
