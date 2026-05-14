@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RealWorldApi.Core/RealWorldApi.Core.csproj" />
+    <Project Path="src/RealWorldApi.Infrastructure/RealWorldApi.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RealWorldApi.UnitTests/RealWorldApi.UnitTests.csproj" />
+  </Folder>
+</Solution>
