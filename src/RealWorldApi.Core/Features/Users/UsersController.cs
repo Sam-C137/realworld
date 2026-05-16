@@ -7,13 +7,17 @@ using RealWorldApi.Core.Features.Users.Services;
 namespace RealWorldApi.Core.Features.Users;
 
 [EnableRateLimiting("default_sliding")]
-public class UsersController(IUsersService usersService): BaseController
+public class UsersController(IUsersService usersService, ILogger<Program> logger): BaseController
 {
     [HttpPost]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
         var (user, token) = await usersService.Register(request);
-        if (user is null) return Conflict(new {message = "User already exists"});
+        if (user is null)
+        {
+            logger.LogError("User already exists for request {request}", request);
+            return Conflict(new {message = "User already exists"});
+        }
         return Ok();
     }
 

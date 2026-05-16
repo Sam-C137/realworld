@@ -1,6 +1,7 @@
 using RealWorldApi.Core.Configurations;
 using RealWorldApi.Core.Domain.Middleware;
 using RealWorldApi.Core.Features.Users.Services;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,12 +22,15 @@ builder.Services.AddScoped<IUsersService, UsersService>();
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
+app.UseExceptionHandling();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors("Frontend");
 app.UseRateLimiter();
 app.MapControllers();
+app.MapOpenApi();
+app.MapScalarApiReference("/docs");
 await app.UseMigrateAndSeedDatabaseOnStart();
 
 
