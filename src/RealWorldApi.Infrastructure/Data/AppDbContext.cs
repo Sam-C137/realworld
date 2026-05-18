@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using RealWorldApi.Infrastructure.Data.Models;
 
 namespace RealWorldApi.Infrastructure.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<User> Users { get; set; }
+    public DbSet<UserSession> UserSessions { get; set; }
+    
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         SetId();

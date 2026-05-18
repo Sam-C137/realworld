@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.IdentityModel.Tokens;
+using RealWorldApi.Infrastructure.Data.Models;
 using StackExchange.Redis;
 
 namespace RealWorldApi.Core.Features.Users.Services;
@@ -23,8 +24,8 @@ public class TokenService(IConfiguration config, IDatabase redis)
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new("sid", sessionId.ToString()),        // session id
-            new("sv",  user.SessionVersion.ToString()) // session version
+            new("sid", sessionId.ToString()),        
+            new("sv",  user.SessionVersion.ToString())
         };
         claims.AddRange(user.Roles.Select(r => new Claim(ClaimTypes.Role, r.Role)));
 
@@ -38,9 +39,11 @@ public class TokenService(IConfiguration config, IDatabase redis)
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
-
-    // ── Refresh Token ─────────────────────────────────────────────
-    // Returns (rawToken, hash) — store hash in DB, send raw in cookie
+    
+    /// <summary>
+    /// Creates new session and refresh tokens
+    /// </summary>
+    /// <returns>Returns (rawToken, hash) — store hash in DB, send raw in cookie</returns>
     public (string Raw, string Hash) CreateRefreshToken()
     {
         var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
@@ -48,16 +51,20 @@ public class TokenService(IConfiguration config, IDatabase redis)
         return (raw, hash);
     }
 
-    private static string HashToken(string raw)
+    public static string HashToken(string raw)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
+    /// <summary>
+    /// Creates a random CSRF token. This should be stored in a secure, HttpOnly cookie and sent in a
+    /// custom header on state-changing requests to prevent CSRF attacks.
+    /// </summary>
+    /// <returns> A random CSRF token. </returns>
     public string CreateCsrfToken() =>
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
-    // ── Redis Cache ───────────────────────────────────────────────
     public async Task CacheSessionAsync(UserSession session, User user)
     {
         var state = new CachedSessionState(

@@ -3,15 +3,14 @@ namespace RealWorldApi.Core.Features.Users;
 
 public static class UserCacheKeys
 {
-    // Cached session auth state — avoids DB on every request
     public static string Session(Guid sessionId) => $"{Constants.AppCachePrefix}session:{sessionId}";
-    // Per-user version — checked lazily on access token refresh, not every request
     public static string SessionVersion(Guid userId) => $"{Constants.AppCachePrefix}user_session_version:{userId}";
-    // Fast revocation check — set on logout/revoke
     public static string RevokedSession(Guid sessionId) => $"{Constants.AppCachePrefix}revoked_session:{sessionId}";
+    public static string LoginEmailRateLimiter(string email) => $"{Constants.AppCachePrefix}login_email:{email}";
+    public static string LoginEmailRateLimiterBackoff(string email) => $"{Constants.AppCachePrefix}login_backoff:{email}";
+    public static string LoginEmailRateLimiterFails(string email) => $"{Constants.AppCachePrefix}login_fails:{email}";
 }
 
-// Auth/CachedSessionState.cs
 public record CachedSessionState(
     Guid SessionId,
     Guid UserId,

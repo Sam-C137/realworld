@@ -10,6 +10,7 @@ builder.AddServiceDefaults()
 builder.AddRedisConfig();
 builder.AddCorsConfig(builder.Services);
 builder.AddDatabaseConfig(builder.Services);
+builder.AddAuthConfig();
 builder.Services.AddOpenApiConfig();
 builder.Services.AddMapsterConfig();
 builder.Services.AddHttpContextAccessor();
@@ -17,6 +18,8 @@ builder.Services.AddControllerConfig();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddScoped<IUsersService, UsersService>();
+builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<EmailRateLimitService>();
 
 
 var app = builder.Build();
@@ -28,6 +31,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors("Frontend");
 app.UseRateLimiter();
+app.UseMiddleware<CsrfValidationMiddleware>(); 
 app.MapControllers();
 app.MapOpenApi();
 app.MapScalarApiReference("/docs");
