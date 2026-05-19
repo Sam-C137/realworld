@@ -4,6 +4,7 @@
     <ProjectReference Include="..\RealWorldApi.Core\RealWorldApi.Core.csproj" />
     <ProjectReference Include="..\RealWorldApi.Infrastructure\RealWorldApi.Infrastructure.csproj" />
     <ProjectReference Include="..\..\tests\RealWorldApi.UnitTests\RealWorldApi.UnitTests.csproj" />
+    <ProjectReference Include="..\..\tests\RealWorldApi.IntegrationTests\RealWorldApi.IntegrationTests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

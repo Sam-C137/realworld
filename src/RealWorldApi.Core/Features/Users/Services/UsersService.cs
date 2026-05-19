@@ -81,6 +81,11 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
         
         if (session is null) return Error.Unauthorized(description: "Invalid refresh token");
 
+        if (session.ExpiresAt < DateTime.UtcNow)
+        {
+            return Error.Unauthorized(description: "Refresh token expired");
+        }
+
         if (session.IsRevoked)
         {
             await RevokeAllUserSessionsAsync(session.UserId); // possible token theft
@@ -102,7 +107,6 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
         session.ExpiresAt = DateTime.UtcNow.AddDays(30);
         await db.SaveChangesAsync();
         
-        await tokens.RevokeSessionInCacheAsync(session.Id, TimeSpan.FromMinutes(20));
         await tokens.CacheSessionAsync(session, session.User);
         
         var accessToken = tokens.CreateAccessToken(session.User, session.Id);

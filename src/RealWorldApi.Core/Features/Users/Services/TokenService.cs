@@ -22,6 +22,7 @@ public class TokenService(IConfiguration config, IDatabase redis)
 
         var claims = new List<Claim>
         {
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new("sid", sessionId.ToString()),        

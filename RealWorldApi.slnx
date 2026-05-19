@@ -6,6 +6,7 @@
     <Project Path="src/RealWorldApi.ServiceDefaults/RealWorldApi.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/RealWorldApi.IntegrationTests/RealWorldApi.IntegrationTests.csproj" />
     <Project Path="tests/RealWorldApi.UnitTests/RealWorldApi.UnitTests.csproj" />
   </Folder>
 </Solution>

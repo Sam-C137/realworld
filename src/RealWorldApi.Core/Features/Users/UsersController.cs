@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using ErrorOr;
 using Mapster;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RealWorldApi.Core.Abstractions;
@@ -82,8 +83,10 @@ public class UsersController(IUsersService usersService, EmailRateLimitService l
                 });
     }
     
+    [Authorize]
     [HttpDelete("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Logout()
     {
@@ -94,13 +97,13 @@ public class UsersController(IUsersService usersService, EmailRateLimitService l
     }
 
     [HttpPost("refresh")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RefreshTokenResponseDto))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RefreshToken()
     {
         return await usersService.RefreshToken()
             .Match<string, IActionResult>(
-                token => Ok(new { token }),
+                token => Ok(new RefreshTokenResponseDto(token)),
                 errors =>
                 {
                     var error = errors.First();
