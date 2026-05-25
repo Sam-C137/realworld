@@ -1,6 +1,8 @@
 using RealWorldApi.Core.Configurations;
 using RealWorldApi.Core.Domain.Middleware;
+using RealWorldApi.Core.Features.Tags.Services;
 using RealWorldApi.Core.Features.Users.Services;
+using RealWorldApi.Core.Workers;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,9 +19,14 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllerConfig();
 builder.Services.AddProblemDetails();
 
+builder.Services.AddHostedService<SessionCleanupWorker>();
+
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<EmailRateLimitService>();
+builder.Services.AddScoped<SessionCleanupService>();
+builder.Services.AddScoped<ITagsService, TagsService>();
+builder.Services.AddScoped<TagsCacheService>();
 
 
 var app = builder.Build();

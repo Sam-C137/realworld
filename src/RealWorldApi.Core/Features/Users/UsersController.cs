@@ -96,6 +96,11 @@ public class UsersController(IUsersService usersService, EmailRateLimitService l
         return NoContent();
     }
 
+    /// <summary>
+    /// Refresh an access token using a valid refresh token.
+    /// Issues a new access token, refresh token, and CSRF token, and updates the user session in db and cache.
+    /// </summary>
+    /// <returns><see cref="RefreshTokenResponseDto"/></returns>
     [HttpPost("refresh")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RefreshTokenResponseDto))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

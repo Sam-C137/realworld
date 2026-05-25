@@ -7,6 +7,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<User> Users { get; set; }
     public DbSet<UserSession> UserSessions { get; set; }
+    public DbSet<Tag> Tags { get; set; }
     
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
