@@ -6,7 +6,6 @@ namespace RealWorldApi.Infrastructure.Data.Models;
 
 [Index(nameof(Email), IsUnique = true)]
 [Index(nameof(Username), IsUnique = true)]
-[Index(nameof(Email), nameof(Username), IsUnique = true)]
 public class User: ITimestampedEntity
 {
     public Guid Id { get; set; }
@@ -42,7 +41,7 @@ public class UserRole
 }
 
 [Index(nameof(UserId))]
-[Index(nameof(UserId), nameof(IsRevoked))]
+[Index(nameof(ExpiresAt))]
 [Index(nameof(RefreshTokenHash))]
 public class UserSession: ITimestampedEntity
 {

@@ -7,13 +7,18 @@ using RealWorldApi.Infrastructure.Data.Models;
 
 namespace RealWorldApi.UnitTests;
 
-public sealed class SessionCleanupServiceTests
+[Collection(PostgresTestCollection.Name)]
+public sealed class SessionCleanupServiceTests(PostgresTestFixture postgresFixture) : IAsyncLifetime
 {
+    public Task InitializeAsync() => postgresFixture.ResetDatabaseAsync();
+
+    public Task DisposeAsync() => Task.CompletedTask;
+
     [Fact]
     public async Task DeleteStaleSessionsAsync_RemovesExpiredAndRevokedSessionsOlderThanCutoff()
     {
         var now = DateTime.UtcNow;
-        await using var db = CreateDbContext();
+        await using var db = postgresFixture.CreateDbContext();
         var user = CreateUser();
         var staleExpired = CreateSession(user, expiresAt: now.AddDays(-8));
         var staleRevoked = CreateSession(user, expiresAt: now.AddDays(20), isRevoked: true, revokedAt: now.AddDays(-8));
@@ -38,7 +43,7 @@ public sealed class SessionCleanupServiceTests
     public async Task DeleteStaleSessionsAsync_PreservesSessionsAtCutoffAndRevokedSessionsWithoutRevokedAt()
     {
         var now = DateTime.UtcNow;
-        await using var db = CreateDbContext();
+        await using var db = postgresFixture.CreateDbContext();
         var user = CreateUser();
         var expiresAtCutoff = CreateSession(user, expiresAt: now.AddDays(-7));
         var revokedAtCutoff = CreateSession(user, expiresAt: now.AddDays(20), isRevoked: true, revokedAt: now.AddDays(-7));
@@ -60,7 +65,7 @@ public sealed class SessionCleanupServiceTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+            options.UseNpgsql(postgresFixture.ConnectionString).UseSnakeCaseNamingConvention());
         services.AddScoped<SessionCleanupService>();
         services.AddHostedService<SessionCleanupWorker>();
 
@@ -74,16 +79,6 @@ public sealed class SessionCleanupServiceTests
 
         Assert.Contains(hostedServices, service => service is SessionCleanupWorker);
     }
-
-    private static AppDbContext CreateDbContext()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        return new AppDbContext(options);
-    }
-
     private static User CreateUser() =>
         new()
         {

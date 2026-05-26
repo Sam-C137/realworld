@@ -62,6 +62,14 @@ public class TagsController(ITagsService tagsService): BaseController
     public async Task<IActionResult> DeleteTag([FromRoute] string name)
     {
         return await tagsService.DeleteTag(name)
-            .Match<Tag, IActionResult>(_ => NoContent(), errors => Problem(errors.First().Description));
+            .Match<Tag, IActionResult>(_ => NoContent(), errors =>
+            {
+                var error = errors.First();
+                return error.Type switch
+                {
+                    ErrorType.NotFound => NotFound(),
+                    _ => Problem(error.Description)
+                };
+            });
     }
 }

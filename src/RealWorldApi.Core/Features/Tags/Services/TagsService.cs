@@ -1,5 +1,6 @@
 using ErrorOr;
 using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using RealWorldApi.Core.Abstractions;
 using RealWorldApi.Core.Features.Tags.Dto;
 using RealWorldApi.Infrastructure.Data;
@@ -129,6 +130,12 @@ public static class TagsFilterSortExtensions
             {
                 query = query.Where(e => EF.Functions.ILike(e.Name, $"%{request.Search.Trim().ToLowerInvariant()}%"));
             }
+            
+            // if (!string.IsNullOrWhiteSpace(request.Search))
+            // {
+            //     var term = request.Search.Trim();
+            //     query = query.Where(e => EF.Functions.TrigramsSimilarity(e.Name, term) > 0.2);
+            // }
 
             return query;
         }
@@ -142,6 +149,12 @@ public static class TagsFilterSortExtensions
                 (TagsSortField.CreatedAt, SortOrder.Desc) => query.OrderByDescending(e => e.CreatedAt),
                 _ => query.OrderBy(e => e.CreatedAt)
             };
+            
+            // if (!string.IsNullOrWhiteSpace(request.Search))
+            // {
+            //     var term = request.Search.Trim();
+            //     sorted = sorted.ThenByDescending(e => EF.Functions.TrigramsSimilarity(e.Name, term));
+            // }
         
             return sorted.ThenBy(e => e.Id);
         }

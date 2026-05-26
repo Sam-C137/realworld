@@ -1,7 +1,10 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
+using RealWorldApi.Core.Features.Users;
+using RealWorldApi.Core.Features.Users.Dto;
 using Xunit.Abstractions;
 
 namespace RealWorldApi.IntegrationTests;
@@ -68,5 +71,32 @@ public abstract class IntegrationTestBase(IntegrationTestContainerFixture fixtur
 
         Assert.False(string.IsNullOrWhiteSpace(cookieValue), $"Expected '{cookieName}' cookie to be set.");
         return Uri.UnescapeDataString(cookieValue);
+    }
+
+    protected static async Task<HttpResponseMessage> RegisterUser(HttpClient client, RegisterDetails? details = null)
+    {
+        var id = Guid.NewGuid().ToString("N")[..8];
+        details ??= new RegisterDetails(
+            Username: $"ryuuma{id}",
+            Email: $"ryuuma-{id}@op.com",
+            Password: "Dragon1"
+        );
+
+        var response = await client.PostAsJsonAsync("/api/v1/users", new RegisterRequestDto
+        {
+            User = details
+        });
+        response.EnsureSuccessStatusCode();
+        return response;
+    }
+    
+    protected static async Task AddDefaultAuthHeaders(HttpClient client, HttpResponseMessage registerResponse)
+    {
+        var csrfToken = GetCookieValue(registerResponse, CookieHelper.CsrfCookie);
+        var result = await registerResponse.Content.ReadFromJsonAsync<RegisterResponseDto>();
+        Assert.NotNull(result);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result.User.Token);
+        client.DefaultRequestHeaders.Add(CookieHelper.CsrfHeader, csrfToken);
     }
 }

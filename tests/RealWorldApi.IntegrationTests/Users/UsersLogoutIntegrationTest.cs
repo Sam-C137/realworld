@@ -16,13 +16,7 @@ public class UsersLogoutIntegrationTest(IntegrationTestContainerFixture fixture,
     {
         var client = CreateHttpsClient();
         var registerResponse = await RegisterUser(client);
-        var csrfToken = GetCookieValue(registerResponse, CookieHelper.CsrfCookie);
-        var result = await registerResponse.Content.ReadFromJsonAsync<RegisterResponseDto>();
-        Assert.NotNull(result);
-
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", result.User.Token);
-        client.DefaultRequestHeaders.Add(CookieHelper.CsrfHeader, csrfToken);
+        await AddDefaultAuthHeaders(client, registerResponse);
 
         var response = await client.DeleteAsync("/api/v1/users/logout");
 
@@ -62,22 +56,5 @@ public class UsersLogoutIntegrationTest(IntegrationTestContainerFixture fixture,
 
         await InspectResponse(response);
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    private static async Task<HttpResponseMessage> RegisterUser(HttpClient client)
-    {
-        var id = Guid.NewGuid().ToString("N")[..8];
-        var details = new RegisterDetails(
-            Username: $"mugiwara{id}",
-            Email: $"mugiwara-{id}@op.com",
-            Password: "StrawHat1"
-        );
-
-        var response = await client.PostAsJsonAsync("/api/v1/users", new RegisterRequestDto
-        {
-            User = details
-        });
-        response.EnsureSuccessStatusCode();
-        return response;
     }
 }

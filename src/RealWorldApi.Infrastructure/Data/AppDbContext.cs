@@ -8,6 +8,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users { get; set; }
     public DbSet<UserSession> UserSessions { get; set; }
     public DbSet<Tag> Tags { get; set; }
+    public DbSet<Article> Articles { get; set; }
+    public DbSet<ArticleTag> ArticleTags { get; set; }
+    
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        builder.HasPostgresExtension("pg_trgm");
+        builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+    }
     
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
