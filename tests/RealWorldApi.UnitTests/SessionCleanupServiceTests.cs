@@ -84,7 +84,6 @@ public sealed class SessionCleanupServiceTests(PostgresTestFixture postgresFixtu
         {
             Id = Guid.NewGuid(),
             Email = $"cleanup-{Guid.NewGuid():N}@example.com",
-            Username = $"cleanup-{Guid.NewGuid():N}",
             PasswordHash = "hash"
         };
 

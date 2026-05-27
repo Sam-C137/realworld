@@ -6,8 +6,8 @@ namespace RealWorldApi.Core.Features.Articles.Services;
 
 public interface IArticlesService
 {
-    public Task<ErrorOr<Article>> CreateArticle(CreateArticleRequestDto request);
-    public Task<ErrorOr<Article>> GetArticle(string slug);
-    public Task<ErrorOr<Article>> UpdateArticle(string slug, UpdateArticleRequestDto request);
-    public Task<ErrorOr<Article>> DeleteArticle(string slug);
+    public Task<ErrorOr<GetArticleResponseDto>> CreateArticle(CreateArticleRequestDto request);
+    public Task<ErrorOr<GetArticleResponseDto>> GetArticle(string slug);
+    public Task<ErrorOr<GetArticleResponseDto>> UpdateArticle(string slug, UpdateArticleRequestDto request);
+    public Task<ErrorOr<GetArticleResponseDto>> DeleteArticle(string slug);
 }

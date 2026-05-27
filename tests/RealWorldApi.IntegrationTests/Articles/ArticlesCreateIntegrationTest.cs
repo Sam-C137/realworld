@@ -27,6 +27,7 @@ public class ArticlesCreateIntegrationTest(IntegrationTestContainerFixture fixtu
         };
         var response = await client.PostAsJsonAsync("/api/v1/articles", req);
         response.EnsureSuccessStatusCode();
+        await InspectResponse(response);
         var result = await response.Content.ReadFromJsonAsync<GetArticleResponseDto>();
         Assert.NotNull(result);
         Assert.Equal("How to train your dragon", result.Article.Title);
@@ -35,6 +36,8 @@ public class ArticlesCreateIntegrationTest(IntegrationTestContainerFixture fixtu
         Assert.Equal(2, result.Article.TagList.Length);
         Assert.Contains(result.Article.TagList, tag => tag == "dragons");
         Assert.Contains(result.Article.TagList, tag => tag == "training");
+        Assert.NotNull(result.Article.Author);
+        Assert.Contains("ryuuma", result.Article.Author.Username);
     }
 
     [Fact]
@@ -81,7 +84,6 @@ public class ArticlesCreateIntegrationTest(IntegrationTestContainerFixture fixtu
         req.Article = details with { TagList = ["a"] };
         response = await client.PostAsJsonAsync("/api/v1/articles", req);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        await InspectResponse(response);
         await AssertErrorMessage(response, "Article.TagList", "Tag must be at least 3 characters long.");
     }
 

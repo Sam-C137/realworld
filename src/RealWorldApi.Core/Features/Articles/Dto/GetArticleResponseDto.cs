@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Mapster;
+using RealWorldApi.Core.Features.Profiles.Dto;
 using RealWorldApi.Infrastructure.Data.Models;
 
 namespace RealWorldApi.Core.Features.Articles.Dto;
@@ -19,7 +20,9 @@ public class GetArticleResponseDetails
     public string[] TagList { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    // public AuthorDto Author { get; set; } = null!;
+    public bool Favorited { get; set; }
+    public long FavoritesCount { get; set; }
+    public ProfileDto Author { get; set; } = null!;
 }
 
 public class GetArticleResponseMapper: IRegister
@@ -34,7 +37,10 @@ public class GetArticleResponseMapper: IRegister
             .Map(dest => dest.Article.BodyJson, src => src.BodyJson)
             .Map(dest => dest.Article.TagList, src => src.ArticleTags.Select(at => at.Tag.Name).ToArray())
             .Map(dest => dest.Article.CreatedAt, src => src.CreatedAt)
-            .Map(dest => dest.Article.UpdatedAt, src => src.UpdatedAt);
-             //.Map(dest => dest.Author, src => src.Author);
+            .Map(dest => dest.Article.UpdatedAt, src => src.UpdatedAt)
+            .Map(dest => dest.Article.Favorited, src => MapContext.Current.Parameters["favorited"])
+            .Map(dest => dest.Article.FavoritesCount, src => MapContext.Current.Parameters["favoritesCount"])
+            .Map(dest => dest.Article.Author, src => src.Author.Profile)
+            .Map(dest => dest.Article.Author.Following, src => MapContext.Current.Parameters["following"]);
     }
 }

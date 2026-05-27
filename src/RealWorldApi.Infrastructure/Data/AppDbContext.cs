@@ -10,6 +10,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Tag> Tags { get; set; }
     public DbSet<Article> Articles { get; set; }
     public DbSet<ArticleTag> ArticleTags { get; set; }
+    public DbSet<Profile> Profiles { get; set; }
+    public DbSet<Follow> Follows { get; set; }
+    public DbSet<Likes> Likes { get; set; }
     
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -18,7 +18,7 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
             var user = new User
             {
                 Email = request.User.Email,
-                Username = request.User.Username,
+                Profile = new Profile { Username = request.User.Username },
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.User.Password),
                 SessionVersion = 1
             };
@@ -43,6 +43,7 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
         {
             var user = await db.Users
                 .Include(u => u.Roles)
+                .Include(u => u.Profile)
                 .FirstOrDefaultAsync(u => u.Email == request.User.Email);
 
             if (user is null) return Error.NotFound(description: "User not found");

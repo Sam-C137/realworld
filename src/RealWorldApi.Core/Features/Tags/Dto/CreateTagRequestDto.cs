@@ -13,7 +13,7 @@ public record CreateTagRequestDetails(string Name);
 
 public class CreateTagRequestValidator : AbstractValidator<CreateTagRequestDto>
 {
-    private AppDbContext _db;
+    private readonly AppDbContext _db;
     
     public CreateTagRequestValidator(AppDbContext db)
     {
@@ -36,10 +36,9 @@ public class CreateTagRequestValidator : AbstractValidator<CreateTagRequestDto>
             .WithMessage(x => $"Tag {x.Tag.Name} already exists.");
     }
 
-    private async Task<bool> BeUniqueCaseInsensitive(string? username, CancellationToken token)
+    private async Task<bool> BeUniqueCaseInsensitive(string? tag, CancellationToken token)
     {
-        var existing = await _db
-            .Tags.FirstOrDefaultAsync(t => t.Name.ToLower() == username.ToLower(), token);
-        return existing is null;
+        if (tag is null) return false;
+        return !await _db.Tags.AnyAsync(t => t.Name.ToLower() == tag.ToLower(), token);
     }
 }

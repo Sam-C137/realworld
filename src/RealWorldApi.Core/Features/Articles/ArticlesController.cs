@@ -22,7 +22,7 @@ public class ArticlesController(IArticlesService articlesService): BaseControlle
     public async Task<IActionResult> GetArticleBySlug([FromRoute] string slug)
     {
         return await articlesService.GetArticle(slug)
-            .Match<Article, IActionResult>(article => Ok(article.Adapt<GetArticleResponseDto>()),
+            .Match<GetArticleResponseDto, IActionResult>(Ok,
                 errors =>
                 {
                     var error = errors.First();
@@ -48,7 +48,7 @@ public class ArticlesController(IArticlesService articlesService): BaseControlle
     {
         return await articlesService.CreateArticle(request)
             .Match(
-                article => CreatedAtAction(nameof(GetArticleBySlug), new { slug = article.Slug }, article.Adapt<GetArticleResponseDto>()), 
+                a => CreatedAtAction(nameof(GetArticleBySlug), new { slug = a.Article.Slug }, a), 
                 errors => Problem(errors.First().Description));;
     }
     
@@ -67,9 +67,8 @@ public class ArticlesController(IArticlesService articlesService): BaseControlle
     public async Task<IActionResult> UpdateArticle([FromRoute] string slug, [FromBody] UpdateArticleRequestDto request)
     {
         return await articlesService.UpdateArticle(slug, request)
-            .Match<Article, IActionResult>(
-                article => Ok(article.Adapt<GetArticleResponseDto>()),
-                errors => {
+            .Match<GetArticleResponseDto, IActionResult>(
+                Ok, errors => {
                     var error = errors.First();
                     return error.Type switch
                     {

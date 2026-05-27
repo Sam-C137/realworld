@@ -14,9 +14,9 @@ public class RegisterResponseMapper : IRegister
     {
         config.NewConfig<User, RegisterResponseDto>()
             .Map(dest => dest.User.Email, src => src.Email)
-            .Map(dest => dest.User.Username, src => src.Username)
-            .Map(dest => dest.User.Bio, src => src.Bio)
-            .Map(dest => dest.User.Image, src => src.Image)
+            .Map(dest => dest.User.Username, src => src.Profile.Username)
+            .Map(dest => dest.User.Bio, src => src.Profile.Username)
+            .Map(dest => dest.User.Image, src => src.Profile.Username)
             .Map(dest => dest.User.Token, src => MapContext.Current.Parameters["token"]);
     }
 }

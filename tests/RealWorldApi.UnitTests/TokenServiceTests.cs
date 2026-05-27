@@ -29,7 +29,6 @@ public sealed class TokenServiceTests(RedisTestFixture redisFixture) : IAsyncLif
         {
             Id = userId,
             Email = "token@example.com",
-            Username = "token-user",
             SessionVersion = 7,
             Roles =
             [
@@ -109,7 +108,6 @@ public sealed class TokenServiceTests(RedisTestFixture redisFixture) : IAsyncLif
         {
             Id = userId,
             Email = "cached@example.com",
-            Username = "cached-user",
             SessionVersion = 3,
             Roles = [new UserRole { UserId = userId, Role = "reader" }]
         };
@@ -146,7 +144,6 @@ public sealed class TokenServiceTests(RedisTestFixture redisFixture) : IAsyncLif
         {
             Id = session.UserId,
             Email = "expired@example.com",
-            Username = "expired-user"
         };
 
         await _sut.CacheSessionAsync(session, user);

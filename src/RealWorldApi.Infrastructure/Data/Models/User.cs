@@ -5,27 +5,22 @@ using Microsoft.EntityFrameworkCore;
 namespace RealWorldApi.Infrastructure.Data.Models;
 
 [Index(nameof(Email), IsUnique = true)]
-[Index(nameof(Username), IsUnique = true)]
 public class User: ITimestampedEntity
 {
     public Guid Id { get; set; }
     [Required, MaxLength(255), EmailAddress]
     public string Email { get; set; } = null!;
-    [Required, MaxLength(255)]
-    public string Username { get; set; } = null!;
     [MaxLength(255)]
     public string? FirstName { get; set; }
     [MaxLength(255)]
     public string? LastName { get; set; }
-    [MaxLength(1024)]
-    public string? Bio { get; set; }
-    [MaxLength(510)]
-    public string? Image { get; set; }
 
     [MaxLength(510)]
     public string PasswordHash { get; set; } = null!;
     public int SessionVersion { get; set; } = 1;
     public ICollection<UserRole> Roles { get; set; } = new List<UserRole>();
+    public ICollection<UserSession> Sessions { get; set; } = new List<UserSession>();
+    public Profile Profile { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

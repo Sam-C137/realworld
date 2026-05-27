@@ -44,7 +44,6 @@ public class RegisterRequestValidator: AbstractValidator<RegisterRequestDto>
     private async Task<bool> BeUniqueUsername(string? username, CancellationToken token)
     {
         if (username is null) return false;
-        return await _db.Users
-            .SingleOrDefaultAsync(u => u.Username == username, token) is null;
+        return !await _db.Profiles.AnyAsync(u => u.Username == username, token);
     }
 }
