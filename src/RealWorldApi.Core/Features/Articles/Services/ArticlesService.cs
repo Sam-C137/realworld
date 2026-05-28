@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using ErrorOr;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using RealWorldApi.Core.Abstractions;
 using RealWorldApi.Core.Features.Articles.Dto;
 using RealWorldApi.Core.Features.Tags.Services;
 using RealWorldApi.Infrastructure.Data;
@@ -13,125 +14,229 @@ namespace RealWorldApi.Core.Features.Articles.Services;
 public partial class ArticlesService(AppDbContext db, ArticleCacheService cache, TagsCacheService tagsCache, IHttpContextAccessor http, ILogger<Program> logger)
     : IArticlesService
 {
-    private sealed record ArticlePropertiesComputed(bool Following, long FavoritesCount, bool Favorited);
+    private sealed record ArticlePropertiesComputed
+    {
+        public bool Following { get; set; }
+        public long FavoritesCount { get; set; }
+        public bool Favorited { get; set; }
+    }
     
     public async Task<ErrorOr<GetArticleResponseDto>> CreateArticle(CreateArticleRequestDto request)
     {
-        var ctx = http.HttpContext!;
-        var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return Error.Unauthorized(description: "User must be authenticated to create articles");
-        
-        var tags = await EvaluateNewTags(request.Article.TagList);
-        var slug = await Slugify(request.Article.Title, request.Article.Description);
-        var article = new Article
+        try
         {
-            Title = request.Article.Title,
-            Description = request.Article.Description,
-            Body = request.Article.Body,
-            Slug = slug,
-            AuthorId = Guid.Parse(userId),
-            ArticleTags = tags.Select(t => new ArticleTag { TagId = t.Id }).ToList()
-        };
-        await db.Articles.AddAsync(article);
-        await db.SaveChangesAsync();    
+            
+            var ctx = http.HttpContext!;
+            var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Error.Unauthorized(description: "User must be authenticated to create articles");
         
-        article = await db.Articles
-            .AsNoTracking()
-            .Include(a => a.ArticleTags).ThenInclude(at => at.Tag)
-            .Include(a => a.Author).ThenInclude(a => a.Profile)
-            .FirstAsync(a => a.Id == article.Id);
+            var tags = await EvaluateNewTags(request.Article.TagList);
+            var slug = await Slugify(request.Article.Title, request.Article.Description);
+            var article = new Article
+            {
+                Title = request.Article.Title,
+                Description = request.Article.Description,
+                Body = request.Article.Body,
+                Slug = slug,
+                AuthorId = Guid.Parse(userId),
+                ArticleTags = tags.Select(t => new ArticleTag { TagId = t.Id }).ToList()
+            };
+            await db.Articles.AddAsync(article);
+            await db.SaveChangesAsync();    
         
-        var computed = await ComputeArticleProperties(article.Id, Guid.Parse(userId));
+            article = await db.Articles
+                .AsNoTracking()
+                .Include(a => a.ArticleTags).ThenInclude(at => at.Tag)
+                .Include(a => a.Author).ThenInclude(a => a.Profile)
+                .FirstAsync(a => a.Id == article.Id);
+        
+            var computed = await ComputeArticleProperties(article.Id, Guid.Parse(userId));
 
-        return article.BuildAdapter()
-            .AddParameters("following", computed.Following)
-            .AddParameters("favoritesCount", computed.FavoritesCount)
-            .AddParameters("favorited", computed.Favorited)
-            .AdaptToType<GetArticleResponseDto>();
+            return article.BuildAdapter()
+                .AddParameters("following", computed.Following)
+                .AddParameters("favoritesCount", computed.FavoritesCount)
+                .AddParameters("favorited", computed.Favorited)
+                .AdaptToType<GetArticleResponseDto>();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error creating article with details {@request}", request);
+            return Error.Failure(description: "An error occurred while creating article");
+        }
     }
     
     public async Task<ErrorOr<GetArticleResponseDto>> GetArticle(string slug)
     {
-        var ctx = http.HttpContext!;
-        var userId = Guid.TryParse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed) ? parsed : Guid.Empty;
+        try
+        {
+            var ctx = http.HttpContext!;
+            var userId = Guid.TryParse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed)
+                ? parsed
+                : Guid.Empty;
 
-        var article = await db.Articles
-            .AsNoTracking()
-            .Where(a => a.Slug == slug)
-            .Include(a => a.ArticleTags)
-            .ThenInclude(at => at.Tag)
-            .Include(a => a.Author)
-            .ThenInclude(a => a.Profile)
-            .FirstOrDefaultAsync();
+            var article = await db.Articles
+                .AsNoTracking()
+                .Where(a => a.Slug == slug)
+                .Include(a => a.ArticleTags)
+                .ThenInclude(at => at.Tag)
+                .Include(a => a.Author)
+                .ThenInclude(a => a.Profile)
+                .FirstOrDefaultAsync();
 
-        if (article is null) return Error.NotFound("Article not found");
+            if (article is null) return Error.NotFound("Article not found");
 
-        var computed = await ComputeArticleProperties(article.Id, userId);
+            var computed = await ComputeArticleProperties(article.Id, userId);
 
-        return article.BuildAdapter()
-            .AddParameters("following", computed.Following)
-            .AddParameters("favoritesCount", computed.FavoritesCount)
-            .AddParameters("favorited", computed.Favorited)
-            .AdaptToType<GetArticleResponseDto>();
+            return article.BuildAdapter()
+                .AddParameters("following", computed.Following)
+                .AddParameters("favoritesCount", computed.FavoritesCount)
+                .AddParameters("favorited", computed.Favorited)
+                .AdaptToType<GetArticleResponseDto>();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error fetching article with slug {slug}", slug);
+            return Error.Failure(description: "An error occurred while fetching article");
+        }
     }
 
+    public async Task<ErrorOr<PaginatedResponse<GetArticleResponseDto>>> GetArticles(GetArticlesRequestDto request)
+    {
+        try
+        {
+            var ctx = http.HttpContext!;
+            var userId = Guid.TryParse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed)
+                ? parsed
+                : Guid.Empty;
+            
+            var sorted = db.Articles
+                .AsNoTracking()
+                .FilterArticlesAsync(request, db)
+                .SortArticlesAsync(request);
+            
+            var total = await sorted.CountAsync();
+            var paginated = await sorted
+                .PaginateArticlesAsync(request)
+                .Include(a => a.ArticleTags)
+                .ThenInclude(at => at.Tag)
+                .Include(a => a.Author)
+                .ThenInclude(a => a.Profile)
+                .ToListAsync();
+
+            var computed = await ComputeArticleProperties(paginated, userId);
+
+            return new PaginatedResponse<GetArticleResponseDto>
+            {
+                Data = paginated.Select(a =>
+                {
+                    computed.TryGetValue(a.Id, out var c);
+                        
+                    return a.BuildAdapter()
+                        .AddParameters("following", c?.Following ?? false)
+                        .AddParameters("favoritesCount", c?.FavoritesCount ?? 0L)
+                        .AddParameters("favorited", c?.Favorited ?? false)
+                        .AdaptToType<GetArticleResponseDto>();
+                }).ToList(),
+                Total = total
+            };
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error fetching articles with details {@request}", request);
+            return Error.Failure(description: "An error occurred while fetching articles");
+        }
+    }
+    
     public async Task<ErrorOr<GetArticleResponseDto>> UpdateArticle(string slug, UpdateArticleRequestDto request)
     {
-        var ctx = http.HttpContext!;
-        var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        
-        var existing = await db.Articles
-            .Include(a => a.ArticleTags)
-            .ThenInclude(at => at.Tag)
-            .Include(a => a.Author)
-            .ThenInclude(a => a.Profile)
-            .FirstOrDefaultAsync(a => a.Slug == slug);
-        
-        if (existing is null) return Error.NotFound("Article not found");
-        if (existing.Author.Id.ToString() != userId) return Error.Forbidden(description: "You are not authorized to update this article");
-        
-        if (!string.IsNullOrWhiteSpace(request.Article.Title))
+        try
         {
-            existing.Title = request.Article.Title;
-            if (string.Equals(existing.Title, request.Article.Title, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(existing.Description, request.Article.Description, StringComparison.OrdinalIgnoreCase))
+            var ctx = http.HttpContext!;
+            var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var existing = await db.Articles
+                .Include(a => a.ArticleTags)
+                .ThenInclude(at => at.Tag)
+                .Include(a => a.Author)
+                .ThenInclude(a => a.Profile)
+                .FirstOrDefaultAsync(a => a.Slug == slug);
+
+            if (existing is null) return Error.NotFound("Article not found");
+            if (existing.Author.Id.ToString() != userId)
+                return Error.Forbidden(description: "You are not authorized to update this article");
+
+            if (!string.IsNullOrWhiteSpace(request.Article.Title))
             {
-                // If title and description are unchanged (ignoring case), keep the existing slug
+                existing.Title = request.Article.Title;
+                if (string.Equals(existing.Title, request.Article.Title, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(existing.Description, request.Article.Description,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    // If title and description are unchanged (ignoring case), keep the existing slug
+                }
+                else
+                {
+                    existing.Slug = await Slugify(existing.Title, existing.Description);
+                }
             }
-            else
+
+            if (!string.IsNullOrWhiteSpace(request.Article.Description))
             {
-                existing.Slug = await Slugify(existing.Title, existing.Description);
+                existing.Description = request.Article.Description;
             }
-        }
 
-        if (!string.IsNullOrWhiteSpace(request.Article.Description))
-        {
-            existing.Description = request.Article.Description;
-        }
-        
-        if (!string.IsNullOrWhiteSpace(request.Article.Body))
-        {
-            existing.Body = request.Article.Body;
-        }
+            if (!string.IsNullOrWhiteSpace(request.Article.Body))
+            {
+                existing.Body = request.Article.Body;
+            }
 
-        if (request.Article.TagList is not null)
-        {
-            var tags = await EvaluateNewTags(request.Article.TagList);
-            existing.ArticleTags = tags.Select(t => new ArticleTag { TagId = t.Id }).ToList();
-        }
-        await db.SaveChangesAsync();
-        var computed = await ComputeArticleProperties(existing.Id, Guid.Parse(userId));
+            if (request.Article.TagList is not null)
+            {
+                var tags = await EvaluateNewTags(request.Article.TagList);
+                existing.ArticleTags = tags.Select(t => new ArticleTag { TagId = t.Id }).ToList();
+            }
 
-        return existing.BuildAdapter()
-            .AddParameters("following", computed.Following)
-            .AddParameters("favoritesCount", computed.FavoritesCount)
-            .AddParameters("favorited", computed.Favorited)
-            .AdaptToType<GetArticleResponseDto>();
+            await db.SaveChangesAsync();
+            var computed = await ComputeArticleProperties(existing.Id, Guid.Parse(userId));
+
+            return existing.BuildAdapter()
+                .AddParameters("following", computed.Following)
+                .AddParameters("favoritesCount", computed.FavoritesCount)
+                .AddParameters("favorited", computed.Favorited)
+                .AdaptToType<GetArticleResponseDto>();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error updating article with slug {slug} and details {@request}", slug, request);
+            return Error.Failure(description: "An error occurred while updating article");
+        }
     }
 
-    public Task<ErrorOr<GetArticleResponseDto>> DeleteArticle(string slug)
+    public async Task<ErrorOr<object>> DeleteArticle(string slug)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var ctx = http.HttpContext!;
+            var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var exiting = await db.Articles
+                .Include(a => a.Author)
+                .ThenInclude(a => a.Profile)
+                .FirstOrDefaultAsync(a => a.Slug == slug);
+
+            if (exiting is null) return Error.NotFound("Article not found");
+            if (exiting.Author.Id.ToString() != userId)
+                return Error.Forbidden(description: "You are not authorized to delete this article");
+
+            db.Articles.Remove(exiting);
+            await db.SaveChangesAsync();
+            return exiting;
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error deleting article with slug {slug}", slug);
+            return Error.Failure(description: "An error occurred while deleting article");
+        }
     }
     
     private async Task<ArticlePropertiesComputed> ComputeArticleProperties(Guid articleId, Guid userId)
@@ -139,14 +244,72 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
         return await db.Articles
             .AsNoTracking()
             .Where(a => a.Id == articleId)
-            .Select(a => new ArticlePropertiesComputed(
-                userId != Guid.Empty && db.Follows.Any(follow => follow.FolloweeId == a.AuthorId && follow.FollowerId == userId),
-                db.Likes.LongCount(like => like.ArticleId == a.Id),
-                userId != Guid.Empty && db.Likes.Any(like => like.ArticleId == a.Id && like.UserId == userId)
-            ))
+            .Select(a => new ArticlePropertiesComputed {
+                Following = userId != Guid.Empty && db.Follows.Any(follow => follow.FolloweeId == a.AuthorId && follow.FollowerId == userId),
+                FavoritesCount = db.Likes.LongCount(like => like.ArticleId == a.Id),
+                Favorited = userId != Guid.Empty && db.Likes.Any(like => like.ArticleId == a.Id && like.UserId == userId)
+            })
             .FirstAsync();
     }
 
+    private async Task<Dictionary<Guid, ArticlePropertiesComputed>> ComputeArticleProperties(
+        IEnumerable<Article> articles, Guid userId)
+    {
+        var articleDetails = articles.Select(a => (articleId: a.Id, authorId: a.AuthorId)).ToList();
+        
+        if (articleDetails.Count == 0) return new Dictionary<Guid, ArticlePropertiesComputed>();
+
+        var result = articleDetails.ToDictionary(
+            x => x.articleId,
+            _ => new ArticlePropertiesComputed());
+
+        var articleIdsByAuthor = articleDetails
+            .GroupBy(x => x.authorId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.articleId).ToList());
+
+        var articleIds = articleDetails.Select(d => d.articleId).ToList();
+        var authorIds = articleDetails.Select(d => d.authorId).ToList();
+
+        var likes = await db.Likes
+            .Where(l => articleIds.Contains(l.ArticleId))
+            .GroupBy(l => l.ArticleId)
+            .Select(g => new { g.Key, Count = g.LongCount() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count);
+
+        foreach (var (articleId, count) in likes)
+        {
+            result[articleId].FavoritesCount = count;
+        }
+
+        if (userId == Guid.Empty) return result;
+        
+        var favorited = await db.Likes
+            .Where(l => articleIds.Contains(l.ArticleId) && l.UserId == userId)
+            .Select(l => l.ArticleId)
+            .ToHashSetAsync();
+
+        foreach (var articleId in favorited)
+        {
+            result[articleId].Favorited = true;
+        }
+
+        var following = await db.Follows
+            .Where(f => authorIds.Contains(f.FolloweeId) && f.FollowerId == userId)
+            .Select(f => f.FolloweeId)
+            .ToHashSetAsync();
+
+        foreach (var authorId in following)
+        {
+            if (!articleIdsByAuthor.TryGetValue(authorId, out var ids)) continue;
+            foreach (var articleId in ids)
+            {
+                result[articleId].Following = true;
+            }
+        }
+
+        return result;
+    }
+    
     private async Task<IEnumerable<Tag>> EvaluateNewTags(IEnumerable<string> tagList)
     {
         var requestedTags = tagList
@@ -181,8 +344,12 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
     private async Task<string> Slugify(string title, string description)
     {
         var baseSlug = SlugSanityRegex()
-            .Replace((title + " " + description).ToLowerInvariant(), "" )
+            .Replace((title + " " + description).ToLowerInvariant(), "")
             .Replace(" ", "-").Trim('-');
+
+        var slugParts = baseSlug.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        if (slugParts.Length > 10)
+            baseSlug = string.Join("-", slugParts.Take(10));
 
         var existingSlugs = await db.Articles
             .Where(a => a.Slug == baseSlug || a.Slug.StartsWith(baseSlug + "-"))
@@ -191,12 +358,76 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
 
         var slug = baseSlug;
         var counter = 1;
-
         while (existingSlugs.Contains(slug))
-        {
             slug = $"{baseSlug}-{counter++}";
-        }
 
         return slug;
+    }
+}
+
+public static class ArticleFilterSortExtensions
+{
+    extension(IQueryable<Article> query)
+    {
+        public IQueryable<Article> FilterArticlesAsync(GetArticlesRequestDto request, AppDbContext db)
+        {
+            if (!string.IsNullOrWhiteSpace(request.Tag))
+            {
+                var term = request.Tag.Trim();
+                query = query.Where(a => a.ArticleTags.Any(at => EF.Functions.ILike(at.Tag.Name, $"%{term}%")));
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Author))
+            {
+                var author = request.Author.Trim();
+                query = query.Where(a => EF.Functions.ILike(a.Author.Profile.Username, $"%{author}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Favorited))
+            {
+                query = query.Where(a => db.Likes.Any(l => 
+                    l.ArticleId == a.Id && 
+                    EF.Functions.ILike(l.User.Profile.Username, $"%{request.Favorited.Trim()}%")));
+            }
+            
+            if (!string.IsNullOrWhiteSpace(request.Search))
+            {
+                var term = request.Search.Trim();
+                query = query.Where(a => a.SearchVector.Matches(
+                    EF.Functions.WebSearchToTsQuery("english", term)));
+            }
+            
+            return query;
+        }
+
+        public IOrderedQueryable<Article> SortArticlesAsync(GetArticlesRequestDto request)
+        {
+            if (!string.IsNullOrWhiteSpace(request.Search))
+            {
+                var term = request.Search.Trim();
+                return query.OrderByDescending(e => e.SearchVector.Rank(
+                        EF.Functions.WebSearchToTsQuery("english", term)))
+                    .ThenBy(e => e.Id);
+            }
+
+            var sorted = (request.Sort, request.Order) switch
+            {
+                (ArticlesSortField.Title, SortOrder.Asc) => query.OrderBy(e => e.Title),
+                (ArticlesSortField.Title, SortOrder.Desc) => query.OrderByDescending(e => e.Title),
+                (ArticlesSortField.CreatedAt, SortOrder.Desc) => query.OrderByDescending(e => e.CreatedAt),
+                _ => query.OrderBy(e => e.CreatedAt)
+            };
+            
+            return sorted.ThenBy(e => e.Id);
+        }
+
+        public IQueryable<Article> PaginateArticlesAsync(GetArticlesRequestDto request)
+        {
+            if (request.Limit is -1) return query;
+            
+            return query
+                .Skip((request.Page - 1) * request.Limit)
+                .Take(request.Limit);
+        }
     }
 }

@@ -1,11 +1,9 @@
 using ErrorOr;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RealWorldApi.Core.Abstractions;
 using RealWorldApi.Core.Features.Articles.Dto;
 using RealWorldApi.Core.Features.Articles.Services;
-using RealWorldApi.Infrastructure.Data.Models;
 
 namespace RealWorldApi.Core.Features.Articles;
 
@@ -49,7 +47,7 @@ public class ArticlesController(IArticlesService articlesService): BaseControlle
         return await articlesService.CreateArticle(request)
             .Match(
                 a => CreatedAtAction(nameof(GetArticleBySlug), new { slug = a.Article.Slug }, a), 
-                errors => Problem(errors.First().Description));;
+                errors => Problem(errors.First().Description));
     }
     
     /// <summary>
@@ -79,10 +77,43 @@ public class ArticlesController(IArticlesService articlesService): BaseControlle
                 });
     }
     
-    [HttpGet]
-    public async Task<IActionResult> GetArticles()
+    /// <summary>
+    /// Delete an existing article. Only the author of the article can delete it.
+    /// </summary>
+    /// <param name="slug"></param>
+    /// <returns></returns>
+    [Authorize]
+    [HttpDelete("{slug}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeleteArticle([FromRoute] string slug)
     {
-        await Task.CompletedTask;
-        return Ok();
+        return await articlesService.DeleteArticle(slug)
+            .Match<object, IActionResult>(
+                _ => NoContent(), 
+                errors => {
+                    var error = errors.First();
+                    return error.Type switch
+                    {
+                        ErrorType.NotFound => NotFound(),
+                        ErrorType.Forbidden => Forbid(),
+                        _ => Problem(error.Description)
+                    };
+                });
+    }
+    
+    /// <summary>
+    /// Get articles with optional filters. The response is paginated.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PaginatedResponse<GetArticleResponseDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]   
+    public async Task<IActionResult> GetArticles([FromQuery] GetArticlesRequestDto request)
+    {
+        return await articlesService.GetArticles(request)
+            .Match(Ok, errors => Problem(errors.First().Description));
     }
 }
