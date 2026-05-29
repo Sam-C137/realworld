@@ -52,11 +52,17 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
         
             var computed = await ComputeArticleProperties(article.Id, Guid.Parse(userId));
 
-            return article.BuildAdapter()
+            var response = article.BuildAdapter()
                 .AddParameters("following", computed.Following)
                 .AddParameters("favoritesCount", computed.FavoritesCount)
                 .AddParameters("favorited", computed.Favorited)
                 .AdaptToType<GetArticleResponseDto>();
+            
+            await cache.InvalidateArticleCache(article.Slug, userId);
+            await cache.BumpVersionAsync();
+            await cache.SetArticleToCache(response.Article.Slug, response, userId);
+
+            return response;
         }
         catch (Exception e)
         {
@@ -73,6 +79,9 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
             var userId = Guid.TryParse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed)
                 ? parsed
                 : Guid.Empty;
+            
+            var cached = await cache.GetArticleFromCache(slug, userId.ToString());
+            if (cached is not null) return cached;
 
             var article = await db.Articles
                 .AsNoTracking()
@@ -87,11 +96,14 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
 
             var computed = await ComputeArticleProperties(article.Id, userId);
 
-            return article.BuildAdapter()
+            var response = article.BuildAdapter()
                 .AddParameters("following", computed.Following)
                 .AddParameters("favoritesCount", computed.FavoritesCount)
                 .AddParameters("favorited", computed.Favorited)
                 .AdaptToType<GetArticleResponseDto>();
+            
+            await cache.SetArticleToCache(response.Article.Slug, response, userId.ToString());
+            return response;
         }
         catch (Exception e)
         {
@@ -108,6 +120,10 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
             var userId = Guid.TryParse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed)
                 ? parsed
                 : Guid.Empty;
+
+            var fingerprint = request.GetCacheFingerPrint();
+            var cached = await cache.GetArticlesFromCache(fingerprint, userId.ToString());
+            if (cached is not null && !ShouldSkipGetArticlesCache(request)) return cached;
             
             var sorted = db.Articles
                 .AsNoTracking()
@@ -125,7 +141,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
 
             var computed = await ComputeArticleProperties(paginated, userId);
 
-            return new PaginatedResponse<GetArticleResponseDto>
+            var response =  new PaginatedResponse<GetArticleResponseDto>
             {
                 Data = paginated.Select(a =>
                 {
@@ -139,6 +155,8 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
                 }).ToList(),
                 Total = total
             };
+            if (!ShouldSkipGetArticlesCache(request)) await cache.SetArticlesToCache(fingerprint, response, userId.ToString());
+            return response;
         }
         catch (Exception e)
         {
@@ -198,6 +216,9 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
 
             await db.SaveChangesAsync();
             var computed = await ComputeArticleProperties(existing.Id, Guid.Parse(userId));
+            
+            await cache.InvalidateArticleCache(existing.Slug, userId);
+            await cache.BumpVersionAsync();
 
             return existing.BuildAdapter()
                 .AddParameters("following", computed.Following)
@@ -230,6 +251,10 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
 
             db.Articles.Remove(exiting);
             await db.SaveChangesAsync();
+            
+            await cache.InvalidateArticleCache(exiting.Slug, userId);
+            await cache.BumpVersionAsync();
+            
             return exiting;
         }
         catch (Exception e)
@@ -363,6 +388,8 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
 
         return slug;
     }
+    
+    private static bool ShouldSkipGetArticlesCache(GetArticlesRequestDto request) => !string.IsNullOrWhiteSpace(request.Search);
 }
 
 public static class ArticleFilterSortExtensions

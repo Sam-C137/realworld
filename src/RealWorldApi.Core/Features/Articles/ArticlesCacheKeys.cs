@@ -2,7 +2,7 @@ using RealWorldApi.Core.Abstractions;
 
 namespace RealWorldApi.Core.Features.Articles;
 
-public class ArticlesCacheKeys : CacheKeysBase<ArticlesCacheKeys>, ICacheKeyResource, ICacheKeyVersion
+public class ArticlesCacheKeys : CacheKeysBase<ArticlesCacheKeys, string>, ICacheKeyResource, ICacheKeyVersion
 {
     public static string Resource => "article";
 
