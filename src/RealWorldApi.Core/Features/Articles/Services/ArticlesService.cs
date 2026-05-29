@@ -165,6 +165,55 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
         }
     }
     
+    public async Task<ErrorOr<PaginatedResponse<GetArticleResponseDto>>> GetFeed(Guid userId, GetArticlesRequestDto request)
+    {
+        try
+        {
+            var fingerprint = $"feed={userId}&" + request.GetCacheFingerPrint();
+            var cached = await cache.GetArticlesFromCache(fingerprint, userId.ToString());
+            if (cached is not null && !ShouldSkipGetArticlesCache(request)) return cached;
+            
+            var sorted = db.Articles
+                .AsNoTracking()
+                .FilterByFeedAsync(userId, db)
+                .FilterArticlesAsync(request, db)
+                .SortArticlesAsync(request);
+            
+            var total = await sorted.CountAsync();
+            var paginated = await sorted
+                .PaginateArticlesAsync(request)
+                .Include(a => a.ArticleTags)
+                .ThenInclude(at => at.Tag)
+                .Include(a => a.Author)
+                .ThenInclude(a => a.Profile)
+                .ToListAsync();
+
+            var computed = await ComputeArticleProperties(paginated, userId);
+
+            var response =  new PaginatedResponse<GetArticleResponseDto>
+            {
+                Data = paginated.Select(a =>
+                {
+                    computed.TryGetValue(a.Id, out var c);
+                        
+                    return a.BuildAdapter()
+                        .AddParameters("following", c?.Following ?? false)
+                        .AddParameters("favoritesCount", c?.FavoritesCount ?? 0L)
+                        .AddParameters("favorited", c?.Favorited ?? false)
+                        .AdaptToType<GetArticleResponseDto>();
+                }).ToList(),
+                Total = total
+            };
+            if (!ShouldSkipGetArticlesCache(request)) await cache.SetArticlesToCache(fingerprint, response, userId.ToString());
+            return response;
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error fetching feed for {userId} with details {@request}", userId, request);
+            return Error.Failure(description: "An error occurred while fetching feed");
+        }
+    }
+    
     public async Task<ErrorOr<GetArticleResponseDto>> UpdateArticle(string slug, UpdateArticleRequestDto request)
     {
         try
@@ -270,7 +319,9 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
             .AsNoTracking()
             .Where(a => a.Id == articleId)
             .Select(a => new ArticlePropertiesComputed {
-                Following = userId != Guid.Empty && db.Follows.Any(follow => follow.FolloweeId == a.AuthorId && follow.FollowerId == userId),
+                Following = userId != Guid.Empty && db.Follows.Any(follow =>
+                    follow.Followee.UserId == a.AuthorId &&
+                    follow.Follower.UserId == userId),
                 FavoritesCount = db.Likes.LongCount(like => like.ArticleId == a.Id),
                 Favorited = userId != Guid.Empty && db.Likes.Any(like => like.ArticleId == a.Id && like.UserId == userId)
             })
@@ -319,8 +370,8 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
         }
 
         var following = await db.Follows
-            .Where(f => authorIds.Contains(f.FolloweeId) && f.FollowerId == userId)
-            .Select(f => f.FolloweeId)
+            .Where(f => authorIds.Contains(f.Followee.UserId) && f.Follower.UserId == userId)
+            .Select(f => f.Followee.UserId)
             .ToHashSetAsync();
 
         foreach (var authorId in following)
@@ -396,6 +447,17 @@ public static class ArticleFilterSortExtensions
 {
     extension(IQueryable<Article> query)
     {
+        public IQueryable<Article> FilterByFeedAsync(Guid loggedInUserId, AppDbContext db)
+        {
+            if (loggedInUserId == Guid.Empty) return query;
+            
+            return query.Where(a => db.Follows
+                .Where(f => f.Follower.UserId == loggedInUserId)
+                .Select(f => f.Followee.UserId)
+                .Distinct()
+                .Any(followeeId => followeeId == a.AuthorId));
+        }
+        
         public IQueryable<Article> FilterArticlesAsync(GetArticlesRequestDto request, AppDbContext db)
         {
             if (!string.IsNullOrWhiteSpace(request.Tag))

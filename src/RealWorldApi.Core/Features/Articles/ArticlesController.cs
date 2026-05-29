@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ErrorOr;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -81,7 +82,7 @@ public class ArticlesController(IArticlesService articlesService): BaseControlle
     /// Delete an existing article. Only the author of the article can delete it.
     /// </summary>
     /// <param name="slug"></param>
-    /// <returns></returns>
+    /// <returns/>
     [Authorize]
     [HttpDelete("{slug}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -107,13 +108,30 @@ public class ArticlesController(IArticlesService articlesService): BaseControlle
     /// Get articles with optional filters. The response is paginated.
     /// </summary>
     /// <param name="request"></param>
-    /// <returns></returns>
+    /// <returns/>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PaginatedResponse<GetArticleResponseDto>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]   
     public async Task<IActionResult> GetArticles([FromQuery] GetArticlesRequestDto request)
     {
         return await articlesService.GetArticles(request)
+            .Match(Ok, errors => Problem(errors.First().Description));
+    }
+    
+    /// <summary>
+    /// Get articles from users followed by the current user. The response is paginated.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns/>
+    [Authorize]
+    [HttpGet("feed")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PaginatedResponse<GetArticleResponseDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)] 
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetFeed([FromQuery] GetArticlesRequestDto request)
+    {
+        var userId = Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var parsed) ? parsed : Guid.Empty;
+        return await articlesService.GetFeed(userId, request)
             .Match(Ok, errors => Problem(errors.First().Description));
     }
 }
