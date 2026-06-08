@@ -2,6 +2,7 @@ using RealWorldApi.Core.Configurations;
 using RealWorldApi.Core.Domain.Middleware;
 using RealWorldApi.Core.Features.Articles.Services;
 using RealWorldApi.Core.Features.Comments.Services;
+using RealWorldApi.Core.Features.Profiles.Services;
 using RealWorldApi.Core.Features.Tags.Services;
 using RealWorldApi.Core.Features.Users.Services;
 using RealWorldApi.Core.Workers;
@@ -30,8 +31,9 @@ builder.Services.AddScoped<SessionCleanupService>();
 builder.Services.AddScoped<ITagsService, TagsService>();
 builder.Services.AddScoped<TagsCacheService>();
 builder.Services.AddScoped<IArticlesService, ArticlesService>();
-builder.Services.AddScoped<ICommentsService, CommentsService>();
 builder.Services.AddScoped<ArticleCacheService>();
+builder.Services.AddScoped<ICommentsService, CommentsService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 
 
 var app = builder.Build();

@@ -1,13 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using RealWorldApi.Core.Abstractions;
 using RealWorldApi.Core.Features.Articles.Dto;
 using RealWorldApi.Core.Features.Comments.Dto;
 using RealWorldApi.Core.Features.Users.Dto;
-using RealWorldApi.Infrastructure.Data;
-using RealWorldApi.Infrastructure.Data.Models;
 using Xunit.Abstractions;
 
 namespace RealWorldApi.IntegrationTests.Comments;
@@ -84,7 +80,7 @@ public class CommentsIntegrationTest(IntegrationTestContainerFixture fixture, IT
             "Peanuts remain the strongest operational incentive.");
         await CreateComment(franky, decoyArticle.Article.Slug,
             "This comment belongs to another mission file.");
-        await FollowUser("anya_reader", "yor_thorn");
+        await FollowUser(reader, "yor_thorn");
 
         var response = await reader.GetAsync($"/api/v1/articles/{targetArticle.Article.Slug}/comments?limit=10");
 
@@ -294,24 +290,10 @@ public class CommentsIntegrationTest(IntegrationTestContainerFixture fixture, IT
             Email: $"{username}@realworld.test")));
     }
 
-    private async Task FollowUser(string followerUsername, string followeeUsername)
+    private static async Task FollowUser(HttpClient follower, string followeeUsername)
     {
-        await using var scope = Factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var follower = await db.Profiles.SingleAsync(p => p.Username == followerUsername);
-        var followee = await db.Profiles.SingleAsync(p => p.Username == followeeUsername);
-        var alreadyFollowing = await db.Follows.AnyAsync(f =>
-            f.FollowerId == follower.Id &&
-            f.FolloweeId == followee.Id);
-
-        if (alreadyFollowing) return;
-
-        db.Follows.Add(new Follow
-        {
-            FollowerId = follower.Id,
-            FolloweeId = followee.Id
-        });
-        await db.SaveChangesAsync();
+        var response = await follower.PostAsync($"/api/v1/profiles/{followeeUsername}/follow", null);
+        response.EnsureSuccessStatusCode();
     }
 
     private static async Task<GetArticleResponseDto> CreateArticle(
