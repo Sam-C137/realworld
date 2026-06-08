@@ -28,8 +28,9 @@ public class GetArticlesRequestValidator : AbstractValidator<GetArticlesRequestD
 
 public static class GetArticlesRequestExtensions
 {
-    public static string GetCacheFingerPrint(this GetArticlesRequestDto request)
+    public static string GetCacheFingerPrint(this GetArticlesRequestDto request, string? feedId = null)
     {
-        return $"p={request.Page}&l={request.Limit}&s={request.Sort}&o={request.Order}&t={request.Tag}&f={request.Favorited}&a={request.Author}";
+        var fid = feedId is not null ? $"fe={feedId}&" : string.Empty;
+        return $"${fid}p={request.Page}&l={request.Limit}&s={request.Sort}&o={request.Order}&t={request.Tag}&f={request.Favorited}&a={request.Author}";
     }
 }

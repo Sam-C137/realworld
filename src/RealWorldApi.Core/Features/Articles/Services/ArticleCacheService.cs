@@ -10,19 +10,19 @@ public class ArticleCacheService(IDatabase redis): ICacheService
     private static readonly TimeSpan ItemTtl = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan ListTtl = TimeSpan.FromMinutes(2);
 
-    public async Task<PaginatedResponse<GetArticleResponseDto>?> GetArticlesFromCache(string fingerprint, string? loggedInUserId = null)
+    public async Task<PaginatedResponse<GetArticleResponseDto>?> GetArticlesFromCache(string fingerprint)
     {
         var version = await GetVersionAsync();
-        var key = ArticlesCacheKeys.List(version, fingerprint + loggedInUserId);
+        var key = ArticlesCacheKeys.List(version, fingerprint);
         var raw = await redis.StringGetAsync(key);
         if (!raw.HasValue) return null;
         return JsonSerializer.Deserialize<PaginatedResponse<GetArticleResponseDto>>((ReadOnlySpan<byte>)raw);
     }
     
-    public async Task SetArticlesToCache(string fingerprint, PaginatedResponse<GetArticleResponseDto> payload, string? loggedInUserId = null)
+    public async Task SetArticlesToCache(string fingerprint, PaginatedResponse<GetArticleResponseDto> payload)
     {
         var version = await GetVersionAsync();
-        var key = ArticlesCacheKeys.List(version, fingerprint + loggedInUserId);
+        var key = ArticlesCacheKeys.List(version, fingerprint);
         await redis.StringSetAsync(key, JsonSerializer.Serialize(payload), ListTtl);
     }
     

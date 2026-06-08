@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using ErrorOr;
 using Mapster;
@@ -37,6 +38,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
                 Title = request.Article.Title,
                 Description = request.Article.Description,
                 Body = request.Article.Body,
+                BodyJson = request.Article.BodyJson is not null ? JsonDocument.Parse(request.Article.BodyJson) : null,
                 Slug = slug,
                 AuthorId = Guid.Parse(userId),
                 ArticleTags = tags.Select(t => new ArticleTag { TagId = t.Id }).ToList()
@@ -117,12 +119,10 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
         try
         {
             var ctx = http.HttpContext!;
-            var userId = Guid.TryParse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed)
-                ? parsed
-                : Guid.Empty;
+            Guid? userId = Guid.TryParse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed) ? parsed : null;
 
-            var fingerprint = request.GetCacheFingerPrint();
-            var cached = await cache.GetArticlesFromCache(fingerprint, userId.ToString());
+            var fingerprint = request.GetCacheFingerPrint(userId?.ToString());
+            var cached = await cache.GetArticlesFromCache(fingerprint);
             if (cached is not null && !ShouldSkipGetArticlesCache(request)) return cached;
             
             var sorted = db.Articles
@@ -139,7 +139,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
                 .ThenInclude(a => a.Profile)
                 .ToListAsync();
 
-            var computed = await ComputeArticleProperties(paginated, userId);
+            var computed = await ComputeArticlesProperties(paginated, userId ?? Guid.Empty);
 
             var response =  new PaginatedResponse<GetArticleResponseDto>
             {
@@ -155,7 +155,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
                 }).ToList(),
                 Total = total
             };
-            if (!ShouldSkipGetArticlesCache(request)) await cache.SetArticlesToCache(fingerprint, response, userId.ToString());
+            if (!ShouldSkipGetArticlesCache(request)) await cache.SetArticlesToCache(fingerprint, response);
             return response;
         }
         catch (Exception e)
@@ -169,8 +169,8 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
     {
         try
         {
-            var fingerprint = $"feed={userId}&" + request.GetCacheFingerPrint();
-            var cached = await cache.GetArticlesFromCache(fingerprint, userId.ToString());
+            var fingerprint = request.GetCacheFingerPrint(userId.ToString());
+            var cached = await cache.GetArticlesFromCache(fingerprint);
             if (cached is not null && !ShouldSkipGetArticlesCache(request)) return cached;
             
             var sorted = db.Articles
@@ -188,7 +188,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
                 .ThenInclude(a => a.Profile)
                 .ToListAsync();
 
-            var computed = await ComputeArticleProperties(paginated, userId);
+            var computed = await ComputeArticlesProperties(paginated, userId);
 
             var response =  new PaginatedResponse<GetArticleResponseDto>
             {
@@ -204,7 +204,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
                 }).ToList(),
                 Total = total
             };
-            if (!ShouldSkipGetArticlesCache(request)) await cache.SetArticlesToCache(fingerprint, response, userId.ToString());
+            if (!ShouldSkipGetArticlesCache(request)) await cache.SetArticlesToCache(fingerprint, response);
             return response;
         }
         catch (Exception e)
@@ -328,7 +328,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
             .FirstAsync();
     }
 
-    private async Task<Dictionary<Guid, ArticlePropertiesComputed>> ComputeArticleProperties(
+    private async Task<Dictionary<Guid, ArticlePropertiesComputed>> ComputeArticlesProperties(
         IEnumerable<Article> articles, Guid userId)
     {
         var articleDetails = articles.Select(a => (articleId: a.Id, authorId: a.AuthorId)).ToList();

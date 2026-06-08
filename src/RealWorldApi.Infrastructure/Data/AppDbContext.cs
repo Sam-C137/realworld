@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Profile> Profiles { get; set; }
     public DbSet<Follow> Follows { get; set; }
     public DbSet<Likes> Likes { get; set; }
+    public DbSet<Comment> Comments { get; set; }
     
     protected override void OnModelCreating(ModelBuilder builder)
     {
