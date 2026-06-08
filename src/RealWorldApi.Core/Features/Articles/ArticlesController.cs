@@ -134,4 +134,60 @@ public class ArticlesController(IArticlesService articlesService): BaseControlle
         return await articlesService.GetFeed(userId, request)
             .Match(Ok, errors => Problem(errors.First().Description));
     }
+
+    /// <summary>
+    /// Favorite article.
+    /// Only authenticated users can favorite an article.
+    /// Favoriting an article that is already favorited by the user will have no effect.
+    /// </summary>
+    /// <param name="slug"></param>
+    /// <returns></returns>
+    [Authorize]
+    [HttpPost("{slug}/favorite")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GetArticleResponseDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> FavoriteArticle([FromRoute] string slug)
+    {
+        return await articlesService.FavoriteArticle(slug)
+            .Match<GetArticleResponseDto, IActionResult>(
+                Ok, errors =>
+                {
+                    var error = errors.First();
+                    return error.Type switch
+                    {
+                        ErrorType.NotFound => NotFound(),
+                        ErrorType.Unauthorized => Unauthorized(),
+                        _ => Problem(error.Description)
+                    };
+                });
+    }
+
+    /// <summary>
+    /// Unfavorite article.
+    /// Only authenticated users can unfavorite an article.
+    /// Unfavoriting an article that is not favorited by the user will have no effect.
+    /// </summary>
+    /// <param name="slug"></param>
+    /// <returns></returns>
+    [Authorize]
+    [HttpDelete("{slug}/favorite")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GetArticleResponseDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UnfavoriteArticle([FromRoute] string slug)
+    {
+        return await articlesService.UnfavoriteArticle(slug)
+            .Match<GetArticleResponseDto, IActionResult>(
+                Ok, errors =>
+                {
+                    var error = errors.First();
+                    return error.Type switch
+                    {
+                        ErrorType.NotFound => NotFound(),
+                        ErrorType.Unauthorized => Unauthorized(),
+                        _ => Problem(error.Description)
+                    };
+                });
+    }
 }

@@ -122,6 +122,13 @@ public class ArticlesFetchIntegrationTest(IntegrationTestContainerFixture fixtur
             description: "Ultrahand field notes for suspicious floating rocks",
             body: "Link tapes rockets to almost anything and calls it archaeology.",
             tagList: ["zelda", "hyrule", "sky"]);
+        var faye = CreateHttpsClient();
+        await RegisterAs(faye, "faye_valentine");
+        await FavoriteArticle(faye, ghost.Article.Slug);
+        await FavoriteArticle(faye, akira.Article.Slug);
+        var samus = CreateHttpsClient();
+        await RegisterAs(samus, "samus_returns");
+        await FavoriteArticle(samus, zelda.Article.Slug);
 
         var response = await ghibli.GetAsync("/api/v1/articles?page=1&limit=2&sort=title&order=asc");
         response.EnsureSuccessStatusCode();
@@ -158,8 +165,10 @@ public class ArticlesFetchIntegrationTest(IntegrationTestContainerFixture fixtur
         response.EnsureSuccessStatusCode();
         result = await response.Content.ReadFromJsonAsync<PaginatedResponse<GetArticleResponseDto>>();
         Assert.NotNull(result);
-        Assert.Empty(result.Data);
-        Assert.Equal(0, result.Total);
+        Assert.Equal(2, result.Total);
+        Assert.Equal(new[] { akira.Article.Slug, ghost.Article.Slug }.OrderBy(x => x).ToArray(),
+            result.Data.Select(x => x.Article.Slug).OrderBy(x => x).ToArray());
+        Assert.All(result.Data, article => Assert.Equal(1, article.Article.FavoritesCount));
 
         response = await ghibli.GetAsync("/api/v1/articles?limit=-1&tag=cyber&author=motoko");
         response.EnsureSuccessStatusCode();
@@ -280,6 +289,15 @@ public class ArticlesFetchIntegrationTest(IntegrationTestContainerFixture fixtur
                 BodyJson: null,
                 TagList: tagList)
         });
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<GetArticleResponseDto>();
+        Assert.NotNull(result);
+        return result;
+    }
+
+    private static async Task<GetArticleResponseDto> FavoriteArticle(HttpClient client, string slug)
+    {
+        var response = await client.PostAsync($"/api/v1/articles/{slug}/favorite", null);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<GetArticleResponseDto>();
         Assert.NotNull(result);

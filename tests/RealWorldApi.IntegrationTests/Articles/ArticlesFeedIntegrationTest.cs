@@ -122,6 +122,7 @@ public class ArticlesFeedIntegrationTest(IntegrationTestContainerFixture fixture
             description: "Selfless posing, polish invoices, and completely normal vanity",
             body: "Himmel files a heroic memo about why every village needs flattering lighting.",
             tagList: ["frieren", "hero", "statue"]);
+        await FavoriteArticle(himmel, mimic.Article.Slug);
 
         await FollowUser("frieren_reader", "fern_deadpan");
         await FollowUser("frieren_reader", "stark_axeman");
@@ -173,8 +174,8 @@ public class ArticlesFeedIntegrationTest(IntegrationTestContainerFixture fixture
         response.EnsureSuccessStatusCode();
         result = await response.Content.ReadFromJsonAsync<PaginatedResponse<GetArticleResponseDto>>();
         Assert.NotNull(result);
-        Assert.Empty(result.Data);
-        Assert.Equal(0, result.Total);
+        Assert.Equal(1, result.Total);
+        Assert.Equal(mimic.Article.Slug, Assert.Single(result.Data).Article.Slug);
     }
 
     [Fact]
@@ -236,6 +237,15 @@ public class ArticlesFeedIntegrationTest(IntegrationTestContainerFixture fixture
                 BodyJson: null,
                 TagList: tagList)
         });
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<GetArticleResponseDto>();
+        Assert.NotNull(result);
+        return result;
+    }
+
+    private static async Task<GetArticleResponseDto> FavoriteArticle(HttpClient client, string slug)
+    {
+        var response = await client.PostAsync($"/api/v1/articles/{slug}/favorite", null);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<GetArticleResponseDto>();
         Assert.NotNull(result);

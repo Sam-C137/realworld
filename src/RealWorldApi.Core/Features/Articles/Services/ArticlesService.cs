@@ -312,6 +312,71 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
             return Error.Failure(description: "An error occurred while deleting article");
         }
     }
+
+    public async Task<ErrorOr<GetArticleResponseDto>> FavoriteArticle(string slug)
+    {
+        try
+        {
+            if (!Guid.TryParse(http.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Error.Unauthorized("You must be logged in to favorite an article");
+
+            var affected = await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO likes (id, article_id, user_id, created_at, updated_at)
+                SELECT {Guid.CreateVersion7()}, id, {userId}, NOW(), NOW()
+                FROM articles
+                WHERE slug = {slug}
+                ON CONFLICT (user_id, article_id) DO UPDATE
+                SET updated_at = likes.updated_at
+                """);
+            if (affected == 0) return Error.NotFound("Article not found");
+
+            await cache.BumpVersionAsync();
+            await cache.InvalidateArticleCache(slug, userId.ToString());
+            return await GetArticle(slug);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error favoriting article with slug {slug}", slug);
+            return Error.Failure(description: "An error occurred while favoriting article");
+        }
+    }
+
+    public async Task<ErrorOr<GetArticleResponseDto>> UnfavoriteArticle(string slug)
+    {
+        try
+        {
+            if (!Guid.TryParse(http.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Error.Unauthorized("You must be logged in to unfavorite an article");
+
+            var affected = await db.Database.ExecuteSqlInterpolatedAsync($"""
+                WITH target AS (
+                    SELECT id
+                    FROM articles
+                    WHERE slug = {slug}
+                ),
+                deleted AS (
+                    DELETE FROM likes
+                    USING target
+                    WHERE likes.article_id = target.id
+                      AND likes.user_id = {userId}
+                    RETURNING likes.id
+                )
+                UPDATE articles
+                SET updated_at = articles.updated_at
+                WHERE id IN (SELECT id FROM target)
+                """);
+            if (affected == 0) return Error.NotFound("Article not found");
+
+            await cache.BumpVersionAsync();
+            await cache.InvalidateArticleCache(slug, userId.ToString());
+            return await GetArticle(slug);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error unfavoriting article with slug {slug}", slug);
+            return Error.Failure(description: "An error occurred while unfavoriting article");
+        }
+    }
     
     private async Task<ArticlePropertiesComputed> ComputeArticleProperties(Guid articleId, Guid userId)
     {

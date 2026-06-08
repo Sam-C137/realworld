@@ -12,4 +12,6 @@ public interface IArticlesService
     public Task<ErrorOr<PaginatedResponse<GetArticleResponseDto>>> GetFeed(Guid userId, GetArticlesRequestDto request);
     public Task<ErrorOr<GetArticleResponseDto>> UpdateArticle(string slug, UpdateArticleRequestDto request);
     public Task<ErrorOr<object>> DeleteArticle(string slug);
+    public Task<ErrorOr<GetArticleResponseDto>> FavoriteArticle(string slug);
+    public Task<ErrorOr<GetArticleResponseDto>> UnfavoriteArticle(string slug);
 }
