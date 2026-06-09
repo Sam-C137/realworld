@@ -6,6 +6,7 @@ using RealWorldApi.Core.Features.Profiles.Services;
 using RealWorldApi.Core.Features.Tags.Services;
 using RealWorldApi.Core.Features.Users.Services;
 using RealWorldApi.Core.Workers;
+using RealWorldApi.Infrastructure.ObjectStorage;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,7 @@ builder.AddRedisConfig();
 builder.AddCorsConfig(builder.Services);
 builder.AddDatabaseConfig(builder.Services);
 builder.AddAuthConfig();
+builder.AddR2Config();
 builder.Services.AddOpenApiConfig();
 builder.Services.AddMapsterConfig();
 builder.Services.AddHttpContextAccessor();
@@ -34,6 +36,8 @@ builder.Services.AddScoped<IArticlesService, ArticlesService>();
 builder.Services.AddScoped<ArticleCacheService>();
 builder.Services.AddScoped<ICommentsService, CommentsService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddSingleton<IObjectStorageService, ObjectStorageService>();
 
 
 var app = builder.Build();

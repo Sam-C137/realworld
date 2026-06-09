@@ -1,3 +1,4 @@
+using Amazon.S3;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RealWorldApi.Infrastructure.Data;
+using RealWorldApi.Infrastructure.ObjectStorage;
 
 namespace RealWorldApi.IntegrationTests;
 
@@ -37,6 +39,11 @@ public class CustomWebApplicationFactory(IntegrationTestContainerFixture fixture
                 options.UseNpgsql(fixture.PostgresConnectionString)
                     .UseSnakeCaseNamingConvention();
             });
+
+            services.RemoveAll<IObjectStorageService>();
+            services.RemoveAll<IAmazonS3>();
+            services.AddSingleton<TestObjectStorageService>();
+            services.AddSingleton<IObjectStorageService>(sp => sp.GetRequiredService<TestObjectStorageService>());
         });
     }
 }

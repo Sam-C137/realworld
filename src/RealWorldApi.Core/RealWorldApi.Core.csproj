@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
+    <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="BCrypt.Net-Next" />
     <PackageReference Include="ErrorOr" />
     <PackageReference Include="FluentValidation" />
@@ -32,6 +34,7 @@
     
     <PackageReference Include="Serilog.AspNetCore" />
 
+    <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
