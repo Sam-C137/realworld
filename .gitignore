@@ -177,3 +177,6 @@ override.tf.json
 .cache/
 .eslintcache
 .sass-cache/
+
+# --- Project Specific Spinn-offs ---
+src/RealWorldApi.Core/wwwroot/

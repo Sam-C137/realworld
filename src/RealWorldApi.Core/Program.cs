@@ -53,6 +53,7 @@ app.UseMiddleware<CsrfValidationMiddleware>();
 app.MapControllers();
 app.MapOpenApi();
 app.MapScalarApiReference("/docs");
+app.AddFrontendConfig();
 await app.UseMigrateAndSeedDatabaseOnStart();
 
 

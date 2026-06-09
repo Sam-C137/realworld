@@ -15,6 +15,11 @@ var api = builder.AddProject<Projects.RealWorldApi_Core>("api")
 if (builder.Environment.IsDevelopment())
 {
     api.WithHttpHealthCheck("/health");
+
+    builder.AddViteApp("client", "../RealWorldApi.Client")
+        .WithPnpm()
+        .WithReference(api)
+        .WithEnvironment("VITE_API_BASE_URL", api.GetEndpoint("https"));
 }
 else
 {
@@ -22,5 +27,5 @@ else
         .WithHttpEndpoint(port: 8081, name: "health")
         .WithHttpHealthCheck("/health", endpointName: "health");
 }
-    
-builder.Build().Run();    
+
+builder.Build().Run();

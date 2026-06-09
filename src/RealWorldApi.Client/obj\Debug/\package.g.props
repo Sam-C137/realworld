@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <PackageJsonName Condition="$(PackageJsonName) == ''">realworldapi-client</PackageJsonName>
+    <PackageJsonPrivate Condition="$(PackageJsonPrivate) == ''">true</PackageJsonPrivate>
+    <PackageJsonType Condition="$(PackageJsonType) == ''">module</PackageJsonType>
+    <PackageJsonScriptsDev Condition="$(PackageJsonScriptsDev) == ''">vite dev</PackageJsonScriptsDev>
+    <PackageJsonScriptsBuild Condition="$(PackageJsonScriptsBuild) == ''">vite build</PackageJsonScriptsBuild>
+    <PackageJsonScriptsStart Condition="$(PackageJsonScriptsStart) == ''">vite preview --host 0.0.0.0</PackageJsonScriptsStart>
+    <PackageJsonScriptsPreview Condition="$(PackageJsonScriptsPreview) == ''">vite preview</PackageJsonScriptsPreview>
+    <PackageJsonScriptsTest Condition="$(PackageJsonScriptsTest) == ''">vitest run</PackageJsonScriptsTest>
+    <PackageJsonScriptsFormat Condition="$(PackageJsonScriptsFormat) == ''">biome format</PackageJsonScriptsFormat>
+    <PackageJsonScriptsLint Condition="$(PackageJsonScriptsLint) == ''">biome lint</PackageJsonScriptsLint>
+    <PackageJsonScriptsCheck Condition="$(PackageJsonScriptsCheck) == ''">biome check</PackageJsonScriptsCheck>
+    <PackageJsonDependenciesFontsourceInter Condition="$(PackageJsonDependenciesFontsourceInter) == ''">^5.1.1</PackageJsonDependenciesFontsourceInter>
+    <PackageJsonDependenciesTailwindcssVite Condition="$(PackageJsonDependenciesTailwindcssVite) == ''">^4.1.18</PackageJsonDependenciesTailwindcssVite>
+    <PackageJsonDependenciesTanstackRouterPlugin Condition="$(PackageJsonDependenciesTanstackRouterPlugin) == ''">^1.133.21</PackageJsonDependenciesTanstackRouterPlugin>
+    <PackageJsonDependenciesTanstackSolidForm Condition="$(PackageJsonDependenciesTanstackSolidForm) == ''">latest</PackageJsonDependenciesTanstackSolidForm>
+    <PackageJsonDependenciesTanstackSolidRouter Condition="$(PackageJsonDependenciesTanstackSolidRouter) == ''">latest</PackageJsonDependenciesTanstackSolidRouter>
+    <PackageJsonDependenciesTanstackSolidRouterDevtools Condition="$(PackageJsonDependenciesTanstackSolidRouterDevtools) == ''">latest</PackageJsonDependenciesTanstackSolidRouterDevtools>
+    <PackageJsonDependenciesClassVarianceAuthority Condition="$(PackageJsonDependenciesClassVarianceAuthority) == ''">^0.7.1</PackageJsonDependenciesClassVarianceAuthority>
+    <PackageJsonDependenciesClsx Condition="$(PackageJsonDependenciesClsx) == ''">^2.1.1</PackageJsonDependenciesClsx>
+    <PackageJsonDependenciesSolidJs Condition="$(PackageJsonDependenciesSolidJs) == ''">^1.9.12</PackageJsonDependenciesSolidJs>
+    <PackageJsonDependenciesTailwindMerge Condition="$(PackageJsonDependenciesTailwindMerge) == ''">^3.0.2</PackageJsonDependenciesTailwindMerge>
+    <PackageJsonDependenciesTailwindcss Condition="$(PackageJsonDependenciesTailwindcss) == ''">^4.1.18</PackageJsonDependenciesTailwindcss>
+    <PackageJsonDependenciesTailwindcssAnimate Condition="$(PackageJsonDependenciesTailwindcssAnimate) == ''">^1.0.7</PackageJsonDependenciesTailwindcssAnimate>
+    <PackageJsonDevdependenciesBiomejsBiome Condition="$(PackageJsonDevdependenciesBiomejsBiome) == ''">2.4.5</PackageJsonDevdependenciesBiomejsBiome>
+    <PackageJsonDevdependenciesSolidjsTestingLibrary Condition="$(PackageJsonDevdependenciesSolidjsTestingLibrary) == ''">^0.8.10</PackageJsonDevdependenciesSolidjsTestingLibrary>
+    <PackageJsonDevdependenciesJsdom Condition="$(PackageJsonDevdependenciesJsdom) == ''">^28.1.0</PackageJsonDevdependenciesJsdom>
+    <PackageJsonDevdependenciesTypescript Condition="$(PackageJsonDevdependenciesTypescript) == ''">^6.0.2</PackageJsonDevdependenciesTypescript>
+    <PackageJsonDevdependenciesVite Condition="$(PackageJsonDevdependenciesVite) == ''">^8.0.0</PackageJsonDevdependenciesVite>
+    <PackageJsonDevdependenciesVitePluginSolid Condition="$(PackageJsonDevdependenciesVitePluginSolid) == ''">^2.11.12</PackageJsonDevdependenciesVitePluginSolid>
+    <PackageJsonDevdependenciesVitest Condition="$(PackageJsonDevdependenciesVitest) == ''">^4.1.5</PackageJsonDevdependenciesVitest>
+    <PackageJsonPnpmOnlybuiltdependencies Condition="$(PackageJsonPnpmOnlybuiltdependencies) == ''">[
+  "esbuild",
+  "lightningcss"
+]</PackageJsonPnpmOnlybuiltdependencies>
+  </PropertyGroup>
+</Project>

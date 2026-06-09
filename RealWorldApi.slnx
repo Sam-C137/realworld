@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/RealWorldApi.AppHost/RealWorldApi.AppHost.csproj" />
+    <Project Path="src/RealWorldApi.Client/RealWorldApi.Client.esproj" />
     <Project Path="src/RealWorldApi.Core/RealWorldApi.Core.csproj" />
     <Project Path="src/RealWorldApi.Infrastructure/RealWorldApi.Infrastructure.csproj" />
     <Project Path="src/RealWorldApi.ServiceDefaults/RealWorldApi.ServiceDefaults.csproj" />
