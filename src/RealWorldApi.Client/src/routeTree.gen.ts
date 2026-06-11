@@ -9,19 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ArticlesRouteImport } from './routes/articles'
-import { Route as AboutRouteImport } from './routes/about'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoFormRouteImport } from './routes/demo.form'
 
-const ArticlesRoute = ArticlesRouteImport.update({
-  id: '/articles',
-  path: '/articles',
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,52 +37,52 @@ const DemoFormRoute = DemoFormRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/articles': typeof ArticlesRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/demo/form': typeof DemoFormRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/articles': typeof ArticlesRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/demo/form': typeof DemoFormRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/articles': typeof ArticlesRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/demo/form': typeof DemoFormRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/articles' | '/demo/form'
+  fullPaths: '/' | '/login' | '/register' | '/demo/form'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/articles' | '/demo/form'
-  id: '__root__' | '/' | '/about' | '/articles' | '/demo/form'
+  to: '/' | '/login' | '/register' | '/demo/form'
+  id: '__root__' | '/' | '/login' | '/register' | '/demo/form'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
-  ArticlesRoute: typeof ArticlesRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   DemoFormRoute: typeof DemoFormRoute
 }
 
 declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
-    '/articles': {
-      id: '/articles'
-      path: '/articles'
-      fullPath: '/articles'
-      preLoaderRoute: typeof ArticlesRouteImport
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -104,8 +104,8 @@ declare module '@tanstack/solid-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
-  ArticlesRoute: ArticlesRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   DemoFormRoute: DemoFormRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,5 +1,7 @@
+import { QueryClientProvider } from "@tanstack/solid-query";
 import { RouterProvider } from "@tanstack/solid-router";
 import { render } from "solid-js/web";
+import { queryClient } from "~/integrations/tanstack-query/root-provider.tsx";
 
 import { getRouter } from "./router";
 
@@ -9,4 +11,11 @@ if (!root) {
 	throw new Error("Root element #root was not found.");
 }
 
-render(() => <RouterProvider router={getRouter()} />, root);
+render(
+	() => (
+		<QueryClientProvider client={queryClient}>
+			<RouterProvider router={getRouter()} />
+		</QueryClientProvider>
+	),
+	root,
+);
