@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using RealWorldApi.Core.Features.Tags.Dto;
-using RealWorldApi.Infrastructure.Data.Models;
 using Xunit.Abstractions;
 
 namespace RealWorldApi.IntegrationTests.Tags;
@@ -20,7 +19,7 @@ public class TagsCreateIntegrationTest(IntegrationTestContainerFixture fixture, 
         };
         var response = await client.PostAsJsonAsync("/api/v1/tags", req);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Tag>();
+        var result = await response.Content.ReadFromJsonAsync<GetTagResponseDto>();
         Assert.NotNull(result);
         Assert.Equal("bankai", result.Name);
     }

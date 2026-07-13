@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using RealWorldApi.Core.Features.Tags.Dto;
-using RealWorldApi.Infrastructure.Data.Models;
 using Xunit.Abstractions;
 
 namespace RealWorldApi.IntegrationTests.Tags;
@@ -30,7 +29,7 @@ public class TagsDeleteIntegrationTest(IntegrationTestContainerFixture fixture, 
         Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
     }
     
-    private static async Task<Tag> CreateTag(HttpClient client, string name)
+    private static async Task<GetTagResponseDto> CreateTag(HttpClient client, string name)
     {
         var req = new CreateTagRequestDto
         {
@@ -38,7 +37,7 @@ public class TagsDeleteIntegrationTest(IntegrationTestContainerFixture fixture, 
         };
         var response = await client.PostAsJsonAsync("/api/v1/tags", req);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Tag>();
+        var result = await response.Content.ReadFromJsonAsync<GetTagResponseDto>();
         Assert.NotNull(result);
         return result;
     }

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using RealWorldApi.Core.Abstractions;
-using RealWorldApi.Infrastructure.Data.Models;
+using RealWorldApi.Core.Features.Tags.Dto;
 using StackExchange.Redis;
 
 namespace RealWorldApi.Core.Features.Tags.Services;
@@ -26,16 +26,16 @@ public class TagsCacheService(IDatabase redis): ICacheService
         await redis.StringSetAsync(key, JsonSerializer.Serialize(payload), ListTtl);
     }
     
-    public async Task<Tag?> GetTagFromCache(Guid id)
+    public async Task<GetTagResponseDto?> GetTagFromCache(Guid id)
     {
         var version = await GetVersionAsync();
         var key = TagsCacheKeys.Item(id, version);
         var raw = await redis.StringGetAsync(key);
         if (!raw.HasValue) return null;
-        return JsonSerializer.Deserialize<Tag>((ReadOnlySpan<byte>)raw);
+        return JsonSerializer.Deserialize<GetTagResponseDto>((ReadOnlySpan<byte>)raw);
     }
 
-    public async Task SetTagToCache(Tag tag)
+    public async Task SetTagToCache(GetTagResponseDto tag)
     {
         var version = await GetVersionAsync();
         var key = TagsCacheKeys.Item(tag.Id, version);

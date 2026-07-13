@@ -1,5 +1,7 @@
 import { useColorMode } from "@kobalte/core";
-import { Link } from "@tanstack/solid-router";
+import { useQuery } from "@tanstack/solid-query";
+import { Link, useLocation } from "@tanstack/solid-router";
+import { Show } from "solid-js";
 import { Button } from "~/components/ui/button";
 import {
 	DropdownMenu,
@@ -7,8 +9,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { CurrentUserOptionsFn } from "~/queries/user.ts";
 
 export default function Header() {
+	const location = useLocation();
+	const user = useQuery(() => CurrentUserOptionsFn(location().pathname));
 	return (
 		<header class="py-4 px-4 sm:px-10">
 			<nav class="flex items-center justify-between max-w-7xl mx-auto">
@@ -18,27 +23,43 @@ export default function Header() {
 					</Link>
 				</h2>
 				<div class="flex items-center gap-4">
-					<Link
-						to="/"
-						class="text-muted-foreground"
-						activeProps={{ class: "text-foreground!" }}
+					<Show
+						when={user.isSuccess}
+						fallback={
+							<>
+								<Link
+									to="/"
+									class="text-muted-foreground"
+									activeProps={{ class: "text-foreground!" }}
+								>
+									Home
+								</Link>
+								<Link
+									to="/login"
+									class="text-muted-foreground"
+									activeProps={{ class: "text-foreground!" }}
+								>
+									Sign in
+								</Link>
+								<Link
+									to="/register"
+									class="text-muted-foreground"
+									activeProps={{ class: "text-foreground!" }}
+								>
+									Sign up
+								</Link>
+							</>
+						}
 					>
-						Home
-					</Link>
-					<Link
-						to="/login"
-						class="text-muted-foreground"
-						activeProps={{ class: "text-foreground!" }}
-					>
-						Sign in
-					</Link>
-					<Link
-						to="/register"
-						class="text-muted-foreground"
-						activeProps={{ class: "text-foreground!" }}
-					>
-						Sign up
-					</Link>
+						<Link
+							to="/logout"
+							class="text-muted-foreground"
+							activeProps={{ class: "text-foreground!" }}
+							preload={false}
+						>
+							Sign Out
+						</Link>
+					</Show>
 					<ThemeToggle />
 				</div>
 			</nav>

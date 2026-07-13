@@ -12,6 +12,7 @@ public enum TagsSortField
 {
     CreatedAt,
     Name,
+    Popularity
 }
 
 public class GetTagsRequestValidator : AbstractValidator<GetTagsRequestDto>

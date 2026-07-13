@@ -28,10 +28,11 @@ public class UsersController(IUsersService usersService, EmailRateLimitService l
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
         return await usersService.Register(request)
-            .Match<(User, string), IActionResult>(
+            .Match<(User, string accessToken, string csrfToken), IActionResult>(
                 value => Ok(value.Item1
                     .BuildAdapter()
-                    .AddParameters("token", value.Item2)
+                    .AddParameters("token", value.accessToken)
+                    .AddParameters("csrfToken", value.csrfToken)
                     .AdaptToType<RegisterResponseDto>()),
                 errors =>
                 {
@@ -62,13 +63,14 @@ public class UsersController(IUsersService usersService, EmailRateLimitService l
         }
         
         return await usersService.Login(request)
-            .MatchAsync<(User, string), IActionResult>(
+            .MatchAsync<(User, string accessToken, string csrfToken), IActionResult>(
                 async value =>
                 {
                     await limiter.ClearFailuresAsync(request.User.Email);
                     return Ok(value.Item1
                         .BuildAdapter()
-                        .AddParameters("token", value.Item2)
+                        .AddParameters("token", value.accessToken)
+                        .AddParameters("csrfToken", value.csrfToken)
                         .AdaptToType<LoginResponseDto>());
                 },
                  async errors =>

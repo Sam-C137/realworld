@@ -169,7 +169,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
     {
         try
         {
-            var fingerprint = request.GetCacheFingerPrint(userId.ToString());
+            var fingerprint = request.GetCacheFingerPrint(userId.ToString(), true);
             var cached = await cache.GetArticlesFromCache(fingerprint);
             if (cached is not null && !ShouldSkipGetArticlesCache(request)) return cached;
             
@@ -486,7 +486,7 @@ public partial class ArticlesService(AppDbContext db, ArticleCacheService cache,
     {
         var baseSlug = SlugSanityRegex()
             .Replace((title + " " + description).ToLowerInvariant(), "")
-            .Replace(" ", "-").Trim('-');
+            .Replace(" ", "-").Trim('-').Trim();
 
         var slugParts = baseSlug.Split('-', StringSplitOptions.RemoveEmptyEntries);
         if (slugParts.Length > 10)

@@ -19,6 +19,7 @@ public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStor
         var userId = Guid.TryParse(http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var parsed) ? parsed
             : Guid.Empty;
         var token = http.HttpContext?.Request.Headers.Authorization.ToString().Split(" ").LastOrDefault();
+        var csrfToken = http.HttpContext?.Request.Headers[CookieHelper.CsrfHeader].ToString();
         if (userId == Guid.Empty || token is null) return Error.Unauthorized();
 
         var user = await db.Users
@@ -29,6 +30,7 @@ public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStor
         return user.
             BuildAdapter()
             .AddParameters("token", token)
+            .AddParameters("csrfToken", csrfToken!)
             .AdaptToType<LoginResponseDto>();
     }
 
@@ -37,6 +39,7 @@ public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStor
         var userId = Guid.TryParse(http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var parsed) ? parsed
             : Guid.Empty;
         var token = http.HttpContext?.Request.Headers.Authorization.ToString().Split(" ").LastOrDefault();
+        var csrfToken = http.HttpContext?.Request.Headers[CookieHelper.CsrfHeader].ToString();
         if (userId == Guid.Empty || token is null) return Error.Unauthorized();
 
         var user = await db.Users
@@ -76,6 +79,7 @@ public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStor
         return user
             .BuildAdapter()
             .AddParameters("token", token)
+            .AddParameters("csrfToken", csrfToken!)
             .AdaptToType<LoginResponseDto>();
     }
 

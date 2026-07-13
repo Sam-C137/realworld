@@ -6,9 +6,10 @@ using RealWorldApi.Infrastructure.Data.Models;
 
 namespace RealWorldApi.Core.Features.Users.Services;
 
-public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAccessor http, ILogger<Program> logger) : IUsersService
+public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAccessor http, ILogger<Program> logger) 
+    : IUsersService
 {
-    public async Task<ErrorOr<(User, string)>> Register(RegisterRequestDto request)
+    public async Task<ErrorOr<(User, string accessToken, string csrfToken)>> Register(RegisterRequestDto request)
     {
         try
         {
@@ -28,7 +29,7 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
             await db.SaveChangesAsync();
 
             return await IssueTokensAsync(user)
-                .Then(t => (user, t));
+                .Then(t => (user, t.accessToken, t.csrfToken));
         }
         catch (Exception e)
         {
@@ -37,7 +38,7 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
         }
     }
     
-    public async Task<ErrorOr<(User, string)>> Login(LoginRequestDto request)
+    public async Task<ErrorOr<(User, string accessToken, string csrfToken)>> Login(LoginRequestDto request)
     {
         try
         {
@@ -54,7 +55,7 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
             }
 
             return await IssueTokensAsync(user)
-                .Then(t => (user, t));
+                .Then(t => (user, t.accessToken, t.csrfToken));
         }
         catch (Exception e)
         {
@@ -136,7 +137,7 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
     /// </summary>
     /// <param name="user">The user object for whom the tokens are being issued.</param>
     /// <returns>An access token as a string, or an error if token issuance fails.</returns>
-    private async Task<ErrorOr<string>> IssueTokensAsync(User user)
+    private async Task<ErrorOr<(string accessToken, string csrfToken)>> IssueTokensAsync(User user)
     {
         try
         {
@@ -166,7 +167,7 @@ public class UsersService(AppDbContext db, TokenService tokens, IHttpContextAcce
             CookieHelper.SetRefreshTokenCookie(ctx.Response, refreshToken, session.ExpiresAt);
             CookieHelper.SetCsrfCookie(ctx.Response, csrfToken);
 
-            return accessToken;
+            return (accessToken, csrfToken);
         }
         catch (Exception e)
         {

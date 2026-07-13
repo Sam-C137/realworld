@@ -10,13 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProfileUsernameRouteImport } from './routes/profile/username'
 import { Route as DemoFormRouteImport } from './routes/demo.form'
+import { Route as ArticleSlugRouteImport } from './routes/article/$slug'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -29,44 +37,88 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
+  id: '/profile/username',
+  path: '/profile/username',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoFormRoute = DemoFormRouteImport.update({
   id: '/demo/form',
   path: '/demo/form',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArticleSlugRoute = ArticleSlugRouteImport.update({
+  id: '/article/$slug',
+  path: '/article/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/register': typeof RegisterRoute
+  '/article/$slug': typeof ArticleSlugRoute
   '/demo/form': typeof DemoFormRoute
+  '/profile/username': typeof ProfileUsernameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/register': typeof RegisterRoute
+  '/article/$slug': typeof ArticleSlugRoute
   '/demo/form': typeof DemoFormRoute
+  '/profile/username': typeof ProfileUsernameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/register': typeof RegisterRoute
+  '/article/$slug': typeof ArticleSlugRoute
   '/demo/form': typeof DemoFormRoute
+  '/profile/username': typeof ProfileUsernameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/demo/form'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/logout'
+    | '/register'
+    | '/article/$slug'
+    | '/demo/form'
+    | '/profile/username'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/demo/form'
-  id: '__root__' | '/' | '/login' | '/register' | '/demo/form'
+  to:
+    | '/'
+    | '/login'
+    | '/logout'
+    | '/register'
+    | '/article/$slug'
+    | '/demo/form'
+    | '/profile/username'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/logout'
+    | '/register'
+    | '/article/$slug'
+    | '/demo/form'
+    | '/profile/username'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  LogoutRoute: typeof LogoutRoute
   RegisterRoute: typeof RegisterRoute
+  ArticleSlugRoute: typeof ArticleSlugRoute
   DemoFormRoute: typeof DemoFormRoute
+  ProfileUsernameRoute: typeof ProfileUsernameRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -76,6 +128,13 @@ declare module '@tanstack/solid-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -92,11 +151,25 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile/username': {
+      id: '/profile/username'
+      path: '/profile/username'
+      fullPath: '/profile/username'
+      preLoaderRoute: typeof ProfileUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/form': {
       id: '/demo/form'
       path: '/demo/form'
       fullPath: '/demo/form'
       preLoaderRoute: typeof DemoFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/article/$slug': {
+      id: '/article/$slug'
+      path: '/article/$slug'
+      fullPath: '/article/$slug'
+      preLoaderRoute: typeof ArticleSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -105,8 +178,11 @@ declare module '@tanstack/solid-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  LogoutRoute: LogoutRoute,
   RegisterRoute: RegisterRoute,
+  ArticleSlugRoute: ArticleSlugRoute,
   DemoFormRoute: DemoFormRoute,
+  ProfileUsernameRoute: ProfileUsernameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

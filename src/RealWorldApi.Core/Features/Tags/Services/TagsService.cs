@@ -1,4 +1,5 @@
 using ErrorOr;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using RealWorldApi.Core.Abstractions;
@@ -10,7 +11,7 @@ namespace RealWorldApi.Core.Features.Tags.Services;
 
 public class TagsService(AppDbContext db, TagsCacheService cache, ILogger<Program> logger): ITagsService
 {
-    public async Task<ErrorOr<Tag>> CreateTag(CreateTagRequestDto request)
+    public async Task<ErrorOr<GetTagResponseDto>> CreateTag(CreateTagRequestDto request)
     {
         try
         {
@@ -19,8 +20,9 @@ public class TagsService(AppDbContext db, TagsCacheService cache, ILogger<Progra
             await db.SaveChangesAsync();
             await cache.InvalidateTagCache(tag.Id);
             await cache.BumpVersionAsync();
-            await cache.SetTagToCache(tag);
-            return tag;
+            var response = tag.Adapt<GetTagResponseDto>();
+            await cache.SetTagToCache(response);
+            return response;
         }
         catch (Exception e)
         {
@@ -29,7 +31,7 @@ public class TagsService(AppDbContext db, TagsCacheService cache, ILogger<Progra
         }
     }
     
-    public async Task<ErrorOr<Tag>> GetTag(Guid id)
+    public async Task<ErrorOr<GetTagResponseDto>> GetTag(Guid id)
     {
         try
         {
@@ -39,8 +41,9 @@ public class TagsService(AppDbContext db, TagsCacheService cache, ILogger<Progra
             var tag = await db.Tags.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
             if (tag is null) return Error.NotFound("Tag not found");
 
-            await cache.SetTagToCache(tag);
-            return tag;
+            var response = tag.Adapt<GetTagResponseDto>();
+            await cache.SetTagToCache(response);
+            return response;
         }
         catch (Exception e)
         {
@@ -49,13 +52,13 @@ public class TagsService(AppDbContext db, TagsCacheService cache, ILogger<Progra
         }
     }
     
-    public async Task<ErrorOr<Tag>> GetTag(string name)
+    public async Task<ErrorOr<GetTagResponseDto>> GetTag(string name)
     {
         try
         {
             var tag = await db.Tags.AsNoTracking().FirstOrDefaultAsync(t => t.Name == name);
             if (tag is null) return Error.NotFound("Tag not found");
-            return tag;
+            return tag.Adapt<GetTagResponseDto>();
         }
         catch (Exception e)
         {
@@ -97,7 +100,7 @@ public class TagsService(AppDbContext db, TagsCacheService cache, ILogger<Progra
         }
     }
 
-    public async Task<ErrorOr<Tag>> DeleteTag(string name)
+    public async Task<ErrorOr<GetTagResponseDto>> DeleteTag(string name)
     {
         try
         {
@@ -108,7 +111,7 @@ public class TagsService(AppDbContext db, TagsCacheService cache, ILogger<Progra
             await db.SaveChangesAsync();
             await cache.InvalidateTagCache(tag.Id);
             await cache.BumpVersionAsync();
-            return tag;
+            return tag.Adapt<GetTagResponseDto>();
         }
         catch (Exception e)
         {
@@ -146,6 +149,8 @@ public static class TagsFilterSortExtensions
             {
                 (TagsSortField.Name, SortOrder.Asc) => query.OrderBy(e => e.Name),
                 (TagsSortField.Name, SortOrder.Desc) => query.OrderByDescending(e => e.Name),
+                (TagsSortField.Popularity, SortOrder.Desc) => query.OrderByDescending(e => e.ArticleTags.Count),
+                (TagsSortField.Popularity, SortOrder.Asc) => query.OrderBy(e => e.ArticleTags.Count),
                 (TagsSortField.CreatedAt, SortOrder.Desc) => query.OrderByDescending(e => e.CreatedAt),
                 _ => query.OrderBy(e => e.CreatedAt)
             };

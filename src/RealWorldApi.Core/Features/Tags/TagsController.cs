@@ -4,15 +4,14 @@ using Microsoft.AspNetCore.Mvc;
 using RealWorldApi.Core.Abstractions;
 using RealWorldApi.Core.Features.Tags.Dto;
 using RealWorldApi.Core.Features.Tags.Services;
-using RealWorldApi.Infrastructure.Data.Models;
 
 namespace RealWorldApi.Core.Features.Tags;
 
 public class TagsController(ITagsService tagsService): BaseController
 {
     
-    [HttpGet("{nameOrId:minLength(3)}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Tag))]
+    [HttpGet("{nameOrId:maxlength(255)}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GetTagResponseDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTag([FromRoute] string nameOrId)
     {
@@ -31,7 +30,7 @@ public class TagsController(ITagsService tagsService): BaseController
 
     [Authorize]
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(Tag))]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(GetTagResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateTag([FromBody] CreateTagRequestDto request)
     {
@@ -56,13 +55,13 @@ public class TagsController(ITagsService tagsService): BaseController
     }
     
     [Authorize]
-    [HttpDelete("{name:minlength(3):maxlength(255)}")]
+    [HttpDelete("{name:maxlength(255)}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteTag([FromRoute] string name)
     {
         return await tagsService.DeleteTag(name)
-            .Match<Tag, IActionResult>(_ => NoContent(), errors =>
+            .Match<GetTagResponseDto, IActionResult>(_ => NoContent(), errors =>
             {
                 var error = errors.First();
                 return error.Type switch

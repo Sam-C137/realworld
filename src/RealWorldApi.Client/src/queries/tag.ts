@@ -7,13 +7,16 @@ import type {
 } from "~/types/globals.ts";
 
 interface GetTagsRequestOptions
-	extends PaginationRequestOptionsWithSearchAndSort<"createdAt" | "title"> {}
+	extends PaginationRequestOptionsWithSearchAndSort<
+		"createdAt" | "title" | "popularity"
+	> {}
 
 export function GetTagsOptionsFn(searchParams: GetTagsRequestOptions) {
 	return {
 		queryKey: [keys.Query.Tags, searchParams],
 		queryFn: async () => {
 			const response = api.get<Paginated<string>>("/api/v1/tags", {
+				context: { authMode: "none" },
 				searchParams,
 			});
 			return await response.json();

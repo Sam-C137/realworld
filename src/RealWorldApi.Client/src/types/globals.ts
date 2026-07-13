@@ -9,8 +9,9 @@ export interface CursorPaginated<T> {
 	previous: string | null;
 }
 
-export interface PaginationRequestOptions
-	extends Record<string, string | number | boolean | undefined> {
+type SearchParams = Record<string, string | number | boolean | undefined>;
+
+export interface PaginationRequestOptions extends SearchParams {
 	page?: number;
 	limit?: number;
 }
@@ -27,8 +28,7 @@ export interface PaginationRequestOptionsWithSearchAndSort<
 	sort?: TSort;
 }
 
-export interface CursorPaginationRequestOptions
-	extends Record<string, string | number | boolean | undefined> {
+export interface CursorPaginationRequestOptions extends SearchParams {
 	limit?: number;
 	after?: string;
 	before?: string;

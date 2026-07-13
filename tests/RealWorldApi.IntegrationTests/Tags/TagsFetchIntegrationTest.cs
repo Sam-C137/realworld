@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using RealWorldApi.Core.Abstractions;
+using RealWorldApi.Core.Features.Articles.Dto;
 using RealWorldApi.Core.Features.Tags.Dto;
-using RealWorldApi.Infrastructure.Data.Models;
 using Xunit.Abstractions;
 
 namespace RealWorldApi.IntegrationTests.Tags;
@@ -17,7 +17,7 @@ public class TagsFetchIntegrationTest(IntegrationTestContainerFixture fixture, I
         var tag = await CreateTag(client, "light-light");
         var response = await client.GetAsync($"/api/v1/tags/{tag.Name}");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Tag>();
+        var result = await response.Content.ReadFromJsonAsync<GetTagResponseDto>();
         Assert.NotNull(result);
         Assert.Equal(tag.Name, result.Name);
     }
@@ -105,8 +105,52 @@ public class TagsFetchIntegrationTest(IntegrationTestContainerFixture fixture, I
         Assert.Equal(5, result.Data.Count);
         Assert.Equal(5, result.Total);       
     }
+
+    [Fact]
+    public async Task GetTags_CanSortByPopularity()
+    {
+        var client = CreateHttpsClient();
+        await AddDefaultAuthHeaders(client, await RegisterUser(client));
+
+        await CreateArticle(client,
+            title: "Final Fantasy X Sphere Grid Speedrun",
+            description: "Tidus learns that one more node is never just one more node",
+            body: "Yuna keeps the pilgrimage on track while the grid quietly eats the evening.",
+            tagList: ["blitzball", "sphere-grid", "summoner"]);
+        await CreateArticle(client,
+            title: "Final Fantasy X Blitzball Draft Day",
+            description: "The Aurochs discover tactics, vibes, and terrifying contract math",
+            body: "Wakka believes in the team, even when the goalie has the reflexes of wet cardboard.",
+            tagList: ["blitzball", "summoner"]);
+        await CreateArticle(client,
+            title: "Final Fantasy X Calm Lands Errand Spiral",
+            description: "One monster capture turns into every monster capture",
+            body: "The party enters the Calm Lands and immediately invents new chores.",
+            tagList: ["blitzball"]);
+
+        var response = await client.GetAsync("/api/v1/tags?page=1&limit=-1&sort=popularity&order=desc");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<PaginatedResponse<string>>();
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Total);
+        Assert.Equal(new[] { "blitzball", "summoner", "sphere-grid" }, result.Data);
+
+        response = await client.GetAsync("/api/v1/tags?page=1&limit=-1&sort=popularity&order=asc");
+        response.EnsureSuccessStatusCode();
+        result = await response.Content.ReadFromJsonAsync<PaginatedResponse<string>>();
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Total);
+        Assert.Equal(new[] { "sphere-grid", "summoner", "blitzball" }, result.Data);
+
+        response = await client.GetAsync("/api/v1/tags?page=1&limit=2&sort=popularity&order=desc");
+        response.EnsureSuccessStatusCode();
+        result = await response.Content.ReadFromJsonAsync<PaginatedResponse<string>>();
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Total);
+        Assert.Equal(new[] { "blitzball", "summoner" }, result.Data);
+    }
     
-    private static async Task<Tag> CreateTag(HttpClient client, string name)
+    private static async Task<GetTagResponseDto> CreateTag(HttpClient client, string name)
     {
         var req = new CreateTagRequestDto
         {
@@ -114,7 +158,29 @@ public class TagsFetchIntegrationTest(IntegrationTestContainerFixture fixture, I
         };
         var response = await client.PostAsJsonAsync("/api/v1/tags", req);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Tag>();
+        var result = await response.Content.ReadFromJsonAsync<GetTagResponseDto>();
+        Assert.NotNull(result);
+        return result;
+    }
+
+    private static async Task<GetArticleResponseDto> CreateArticle(
+        HttpClient client,
+        string title,
+        string description,
+        string body,
+        string[] tagList)
+    {
+        var response = await client.PostAsJsonAsync("/api/v1/articles", new CreateArticleRequestDto
+        {
+            Article = new CreateArticleRequestDetails(
+                Title: title,
+                Description: description,
+                Body: body,
+                BodyJson: null,
+                TagList: tagList)
+        });
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<GetArticleResponseDto>();
         Assert.NotNull(result);
         return result;
     }

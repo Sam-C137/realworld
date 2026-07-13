@@ -18,12 +18,12 @@ public static class CookieHelper
         });
     }
 
-    public static void SetCsrfCookie(HttpResponse response, string csrfToken)
+    public static void SetCsrfCookie(HttpResponse response, string csrfToken, bool secure = true)
     {
         response.Cookies.Append(CsrfCookie, csrfToken, new CookieOptions
         {
             HttpOnly  = false,              
-            Secure    = true,
+            Secure    = secure,
             SameSite  = SameSiteMode.None,
             Path      = "/"
         });

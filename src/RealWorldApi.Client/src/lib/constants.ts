@@ -24,7 +24,10 @@ export const keys = {
 		TokenExpiresAt: "tokenExpiresAt",
 	},
 	Query: {
+		CurrentUser: "currentUser",
 		Articles: "articles",
+		Article: "article",
+		Feed: "feed",
 		Tags: "tags",
 	},
 } as const;

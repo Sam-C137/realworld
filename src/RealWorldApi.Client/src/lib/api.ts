@@ -1,28 +1,95 @@
 import { type } from "arktype";
 import ky, {
+	type AfterResponseState,
 	type BeforeRequestState,
 	HTTPError,
 	type KyInstance,
-	type Options,
+	type NormalizedOptions,
 } from "ky";
 import { keys, time } from "~/lib/constants.ts";
 import { ProblemDetails, ValidationProblemDetails } from "~/lib/validation.ts";
 
-let isRefreshing = false;
+const refreshPath = "/api/v1/users/refresh";
+let refreshPromise: Promise<string> | undefined;
+
+/**
+ * Controls how an API request participates in authentication.
+ * - `required` (default): sends available credentials and redirects to login if
+ *   the refresh session is invalid.
+ * - `optional`: sends available credentials, but clears stale auth and continues
+ *   anonymously instead of redirecting.
+ * - `none`: does not attach stored auth headers or attempt token refresh;
+ *   browser-managed cookies still follow normal fetch credential rules.
+ */
+type AuthMode = "required" | "optional" | "none";
+
+function getAuthMode(options: NormalizedOptions): AuthMode {
+	const mode = options.context.authMode;
+	return mode === "optional" || mode === "none" ? mode : "required";
+}
+
+function parseTokenExpiresAt(expiresAt: string) {
+	const parsedMs = Date.parse(expiresAt);
+	return Number.isNaN(parsedMs) ? undefined : parsedMs;
+}
+
+function clearAuth() {
+	localStorage.removeItem(keys.LocalStorage.AccessToken);
+	localStorage.removeItem(keys.LocalStorage.TokenExpiresAt);
+	localStorage.removeItem(keys.LocalStorage.CsrfToken);
+}
+
+function handleInvalidSession(authMode: AuthMode, request?: Request) {
+	clearAuth();
+	if (authMode === "required") {
+		window.location.href = "/login";
+		return;
+	}
+
+	request?.headers.delete("Authorization");
+	request?.headers.delete("X-CSRF-Token");
+}
+
+function isInvalidRefreshToken(error: unknown) {
+	return error instanceof HTTPError && error.response.status === 401;
+}
+
+function refreshAccessToken() {
+	refreshPromise ??= ky
+		.post(refreshPath)
+		.json<{ token: string }>()
+		.then(({ token }) => {
+			localStorage.setItem(keys.LocalStorage.AccessToken, token);
+			localStorage.setItem(
+				keys.LocalStorage.TokenExpiresAt,
+				new Date(Date.now() + 15 * time.Minute).toISOString(),
+			);
+			return token;
+		})
+		.finally(() => {
+			refreshPromise = undefined;
+		});
+
+	return refreshPromise;
+}
 
 /**
  * @doc Token hook: attaches the access token to outgoing requests
  * - If token exists in localStorage, adds Authorization header
  * - If no token, request proceeds without auth header
  */
-function tokenHook({ request }: BeforeRequestState) {
+function tokenHook({ request, options }: BeforeRequestState) {
+	if (getAuthMode(options) === "none") return;
+
 	const accessToken = localStorage.getItem(keys.LocalStorage.AccessToken);
 	if (accessToken) {
 		request.headers.set("Authorization", `Bearer ${accessToken}`);
 	}
 }
 
-function csrfHook({ request }: BeforeRequestState) {
+function csrfHook({ request, options }: BeforeRequestState) {
+	if (getAuthMode(options) === "none") return;
+
 	const csrfToken = localStorage.getItem(keys.LocalStorage.CsrfToken);
 	if (csrfToken) {
 		request.headers.set("X-CSRF-Token", csrfToken);
@@ -32,66 +99,98 @@ function csrfHook({ request }: BeforeRequestState) {
 /**
  * @doc Refresh hook: proactively refreshes tokens before expiry
  * - Skips refresh endpoint to avoid infinite loops
- * - If no expiry tracked or token already expired, lets request proceed
- * - If within 5 minutes of expiry, attempts refresh and updates stored credentials
- * - On refresh failure, continues with old token (backend will reject if invalid)
+ * - If within 5 minutes of expiry or already expired, refreshes before the request
+ * - Concurrent requests wait for the same refresh operation
+ * - Optional requests continue anonymously when the refresh session is invalid
  */
-async function refreshHook({ request }: BeforeRequestState) {
-	if (request.url.includes("/api/v1/users/refresh")) {
+async function refreshHook({ request, options }: BeforeRequestState) {
+	const authMode = getAuthMode(options);
+	if (authMode === "none" || request.url.includes(refreshPath)) {
+		return;
+	}
+	if (!request.headers.has("Authorization")) return;
+
+	if (refreshPromise) {
+		try {
+			const token = await refreshPromise;
+			request.headers.set("Authorization", `Bearer ${token}`);
+		} catch (error) {
+			if (isInvalidRefreshToken(error)) {
+				handleInvalidSession(authMode, request);
+			}
+		}
 		return;
 	}
 
 	const expiresAt = localStorage.getItem(keys.LocalStorage.TokenExpiresAt);
 	if (!expiresAt) return;
 
-	const expiresAtMs = Number(expiresAt);
+	const expiresAtMs = parseTokenExpiresAt(expiresAt);
+	if (expiresAtMs === undefined) return;
+
 	const timeUntilExpiry = expiresAtMs - Date.now();
-
-	if (timeUntilExpiry <= 0) return;
-
-	if (timeUntilExpiry <= 5 * time.Minute && !isRefreshing) {
-		isRefreshing = true;
-
+	if (timeUntilExpiry <= 5 * time.Minute) {
 		try {
-			const data = await ky
-				.post("/api/v1/users/refresh", {
-					headers: {
-						Authorization: `Bearer ${localStorage.getItem(keys.LocalStorage.AccessToken)}`,
-					},
-				})
-				.json<{ token: string }>();
-
-			localStorage.setItem(keys.LocalStorage.AccessToken, data.token);
-			localStorage.setItem(
-				keys.LocalStorage.TokenExpiresAt,
-				String(Date.now() + 15 * time.Minute),
-			);
-			request.headers.set("Authorization", `Bearer ${data.token}`);
+			const token = await refreshAccessToken();
+			request.headers.set("Authorization", `Bearer ${token}`);
 		} catch (error) {
-			// On refresh failure, continue with old token (backend will reject if invalid)
-			void error;
-		} finally {
-			isRefreshing = false;
+			if (isInvalidRefreshToken(error)) {
+				handleInvalidSession(authMode, request);
+			}
 		}
 	}
 }
 
 /**
- * @doc Redirect hook: handles expired token responses (440)
- * - Only handles status 440 (custom code for expired JWT from backend)
- * - Clears all auth data from localStorage and redirects to login
- * - Route protection for 401 is handled by router beforeLoad guards
+ * @doc Retries an authenticated request once after refreshing its access token
+ * - Handles the backend's 401 response and the previously supported 440 response
+ * - Requests with auth mode `none` never participate in refresh handling
+ * - Optional requests retry anonymously when their refresh session is invalid
+ * - Preserves auth on transient refresh failures
  */
-async function _redirectHook(
-	_request: Request,
-	_options: Options,
-	response: Response,
-) {
-	if (response.status === 440) {
-		localStorage.removeItem(keys.LocalStorage.AccessToken);
-		localStorage.removeItem(keys.LocalStorage.TokenExpiresAt);
-		localStorage.removeItem(keys.LocalStorage.CsrfToken);
-		window.location.href = "/login";
+async function retryAfterRefresh({
+	request,
+	options,
+	response,
+	retryCount,
+}: AfterResponseState) {
+	const authMode = getAuthMode(options);
+	const isExpiredResponse = response.status === 401 || response.status === 440;
+	if (
+		authMode === "none" ||
+		!isExpiredResponse ||
+		retryCount > 0 ||
+		request.url.includes(refreshPath) ||
+		(authMode === "optional" && !request.headers.has("Authorization"))
+	) {
+		return;
+	}
+
+	try {
+		const token = await refreshAccessToken();
+		const headers = new Headers(request.headers);
+		headers.set("Authorization", `Bearer ${token}`);
+
+		return ky.retry({
+			request: new Request(request, { headers }),
+			delay: 0,
+			code: "TOKEN_REFRESHED",
+		});
+	} catch (error) {
+		if (isInvalidRefreshToken(error)) {
+			handleInvalidSession(authMode);
+			if (authMode === "optional") {
+				const headers = new Headers(request.headers);
+				headers.delete("Authorization");
+				headers.delete("X-CSRF-Token");
+
+				return ky.retry({
+					request: new Request(request, { headers }),
+					delay: 0,
+					code: "ANONYMOUS_FALLBACK",
+				});
+			}
+		}
 	}
 }
 
@@ -102,8 +201,8 @@ async function _redirectHook(
  */
 async function errorTransformer(error: unknown) {
 	if (error instanceof HTTPError) {
-		const body = await error.response.json().catch(() => ({}));
-		const message = type
+		const body = error.data ?? {};
+		error.message = type
 			.match({})
 			.case({ message: "string" }, ({ message }) => message)
 			.case(ValidationProblemDetails, ({ errors }) =>
@@ -114,30 +213,25 @@ async function errorTransformer(error: unknown) {
 			)
 			.case(
 				ProblemDetails,
-				({ detail, title }) => `${title ? `${title}: ` : ""}${detail ?? ""}`,
+				({ detail, title, status }) =>
+					`${title ? `${title}: ` : ""}${detail ?? ""} status: ${status}`,
 			)
-			.default(() => "An error occured, please try again later")(body);
-
-		throw new Error(message);
+			.default(() => "An error occurred, please try again later")(body);
+		return;
 	}
-	throw error;
 }
 
 const api: KyInstance = ky.create({
 	hooks: {
 		beforeRequest: [tokenHook, refreshHook, csrfHook],
-		// afterResponse: [redirectHook],
+		afterResponse: [retryAfterRefresh],
 		beforeError: [
 			async ({ error }) => {
-				await errorTransformer(error).catch((transformed) => {
-					// Re-attach the normalized message onto the HTTPError
-					// so callers still receive an Error with `.message`
-					error.message = (transformed as Error).message;
-				});
+				await errorTransformer(error);
 				return error;
 			},
 		],
 	},
 });
 
-export { api };
+export { api, clearAuth };

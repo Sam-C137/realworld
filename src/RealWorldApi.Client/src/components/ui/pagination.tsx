@@ -8,7 +8,7 @@ type PaginationProps = JSX.HTMLAttributes<HTMLElement> & {
 	class?: string | undefined;
 };
 
-const Pagination = (props: PaginationProps) => {
+function Pagination(props: PaginationProps) {
 	const [local, others] = splitProps(props, ["class"]);
 	return (
 		<nav
@@ -19,7 +19,7 @@ const Pagination = (props: PaginationProps) => {
 			{...others}
 		/>
 	);
-};
+}
 
 type PaginationContentProps = JSX.HTMLAttributes<HTMLUListElement> & {
 	class?: string | undefined;
@@ -98,7 +98,7 @@ type PaginationPreviousProps = PaginationLinkProps & {
 	text?: string;
 };
 
-const PaginationPrevious = (props: PaginationPreviousProps) => {
+function PaginationPrevious(props: PaginationPreviousProps) {
 	const [local, others] = splitProps(props, ["class", "children", "text"]);
 
 	return (
@@ -128,13 +128,13 @@ const PaginationPrevious = (props: PaginationPreviousProps) => {
 			)}
 		</PaginationLink>
 	);
-};
+}
 
 type PaginationNextProps = PaginationLinkProps & {
 	text?: string;
 };
 
-const PaginationNext = (props: PaginationNextProps) => {
+function PaginationNext(props: PaginationNextProps) {
 	const [local, others] = splitProps(props, ["class", "children", "text"]);
 
 	return (
@@ -164,13 +164,13 @@ const PaginationNext = (props: PaginationNextProps) => {
 			)}
 		</PaginationLink>
 	);
-};
+}
 
 type PaginationEllipsisProps = JSX.HTMLAttributes<HTMLSpanElement> & {
 	class?: string | undefined;
 };
 
-const PaginationEllipsis = (props: PaginationEllipsisProps) => {
+function PaginationEllipsis(props: PaginationEllipsisProps) {
 	const [local, others] = splitProps(props, ["class"]);
 
 	return (
@@ -202,7 +202,7 @@ const PaginationEllipsis = (props: PaginationEllipsisProps) => {
 			<span class="sr-only">More pages</span>
 		</span>
 	);
-};
+}
 
 interface PaginationBarProps {
 	total?: number;

@@ -1,20 +1,29 @@
-import { useQuery } from "@tanstack/solid-query";
-import { createFileRoute, Link } from "@tanstack/solid-router";
+import { type QueryClient, useMutation, useQuery } from "@tanstack/solid-query";
+import { Await, createFileRoute, defer, Link } from "@tanstack/solid-router";
 import { type } from "arktype";
 import { format } from "date-fns";
-import { For, Match, Show, Switch } from "solid-js";
+import { ErrorBoundary, For, Match, Show, Suspense, Switch } from "solid-js";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button.tsx";
 import { PaginationBar } from "~/components/ui/pagination.tsx";
 import { Skeleton } from "~/components/ui/skeleton.tsx";
+import { Swirling } from "~/components/ui/swirling.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils.ts";
-import { GetArticlesOptionsFn } from "~/queries/article.ts";
+import {
+	FavoriteArticleOptions,
+	GetArticlesOptionsFn,
+	GetFeedOptionsFn,
+	UnfavoriteArticleOptions,
+} from "~/queries/article.ts";
 import { GetTagsOptionsFn } from "~/queries/tag.ts";
+import { CurrentUserOptionsFn } from "~/queries/user.ts";
 import type { Article } from "~/types/article.ts";
+import type { User } from "~/types/user.ts";
 
 const SearchSchema = type({
 	"tag?": "string",
+	"feed?": "true|undefined",
 	page: "string.numeric.parse | number = 1",
 	limit: "string.numeric.parse | number = 10",
 });
@@ -22,18 +31,21 @@ const SearchSchema = type({
 export const Route = createFileRoute("/")({
 	component: App,
 	validateSearch: SearchSchema,
+	loader: async ({ context }) => {
+		const { queryClient } = context as { queryClient: QueryClient };
+		const user = defer(queryClient.ensureQueryData(CurrentUserOptionsFn()));
+		return { user };
+	},
 });
 
 function App() {
-	const tags = useQuery(() => GetTagsOptionsFn({ limit: -1 }));
-	const search = Route.useSearch();
-	const articles = useQuery(() =>
-		GetArticlesOptionsFn({
-			page: 1,
-			limit: 10,
-			tag: search().tag,
-		}),
+	const loaderData = Route.useLoaderData();
+	const tags = useQuery(() =>
+		GetTagsOptionsFn({ limit: -1, sort: "popularity", order: "desc" }),
 	);
+	const search = Route.useSearch();
+	const articles = useQuery(() => GetArticlesOptionsFn(search()));
+	const feed = useQuery(() => GetFeedOptionsFn(search()));
 
 	return (
 		<main class="min-h-dvh text-foreground space-y-2">
@@ -44,20 +56,44 @@ function App() {
 				</span>
 			</section>
 			<section class="py-4 px-4 sm:px-10 flex justify-between gap-8 mx-auto max-w-7xl">
-				<Tabs defaultValue="global" class="w-full">
+				<Tabs
+					defaultValue="global"
+					class="w-full"
+					value={search().feed ? "feed" : "global"}
+				>
 					<TabsList class="border-b bg-transparent p-0 w-full justify-start">
 						<TabsTrigger
 							value="global"
 							class="-mb-1 cursor-pointer text-foreground data-[selected]:text-primary"
+							as={Link}
+							search={{
+								...search(),
+								//@ts-expect-error `as` destroys typing
+								feed: undefined,
+							}}
 						>
 							Global Feed
 						</TabsTrigger>
-						<TabsTrigger
-							value="password"
-							class="-mb-1 cursor-pointer text-foreground data-[selected]:text-primary"
-						>
-							My Feed
-						</TabsTrigger>
+						<ErrorBoundary fallback={null}>
+							<Suspense fallback={null}>
+								<Await promise={loaderData().user}>
+									{() => (
+										<TabsTrigger
+											value="feed"
+											class="-mb-1 cursor-pointer text-foreground data-[selected]:text-primary"
+											as={Link}
+											search={{
+												...search(),
+												//@ts-expect-error `as` destroys typing
+												feed: true,
+											}}
+										>
+											My Feed
+										</TabsTrigger>
+									)}
+								</Await>
+							</Suspense>
+						</ErrorBoundary>
 					</TabsList>
 					<TabsContent value="global">
 						<Switch>
@@ -85,7 +121,23 @@ function App() {
 							<Match when={articles.isSuccess}>
 								<ul>
 									<For each={articles.data?.data}>
-										{(article) => <ArticleItem article={article} />}
+										{(article) => (
+											<ErrorBoundary
+												fallback={<ArticleItem article={article} user={null} />}
+											>
+												<Suspense
+													fallback={
+														<ArticleItem article={article} user={null} />
+													}
+												>
+													<Await promise={loaderData().user}>
+														{(user) => (
+															<ArticleItem article={article} user={user.user} />
+														)}
+													</Await>
+												</Suspense>
+											</ErrorBoundary>
+										)}
 									</For>
 								</ul>
 								<Show when={!!articles.data?.total}>
@@ -94,7 +146,56 @@ function App() {
 							</Match>
 						</Switch>
 					</TabsContent>
-					<TabsContent value="personal">Password Tab</TabsContent>
+					<TabsContent value="feed">
+						<Switch>
+							<Match when={feed.isPending}>
+								<ul>
+									<For each={Array(10).fill(null)}>{ArticleItemLoading}</For>
+								</ul>
+							</Match>
+							<Match when={feed.isError}>
+								<div class="w-full min-h-40 grid place-items-center">
+									<p class="text-destructive text-center">
+										Error: {feed.error?.message}
+									</p>
+								</div>
+							</Match>
+							<Match when={!feed.isPending && feed.data?.data.length === 0}>
+								<div class="w-full min-h-40 grid place-items-center">
+									<p class="text-muted-foreground text-center">
+										No articles are here... yet. Follow someone to see their
+										articles on your feed
+									</p>
+								</div>
+							</Match>
+							<Match when={feed.isSuccess}>
+								<ul>
+									<For each={feed.data?.data}>
+										{(article) => (
+											<ErrorBoundary
+												fallback={<ArticleItem article={article} user={null} />}
+											>
+												<Suspense
+													fallback={
+														<ArticleItem article={article} user={null} />
+													}
+												>
+													<Await promise={loaderData().user}>
+														{(user) => (
+															<ArticleItem article={article} user={user.user} />
+														)}
+													</Await>
+												</Suspense>
+											</ErrorBoundary>
+										)}
+									</For>
+								</ul>
+								<Show when={!!feed.data?.total}>
+									<PaginationBar total={feed.data?.total} class="mx-0" />
+								</Show>
+							</Match>
+						</Switch>
+					</TabsContent>
 				</Tabs>
 				<div class="hidden sm:flex flex-col gap-3 max-w-72 min-w-72">
 					<p>Popular tags</p>
@@ -137,10 +238,19 @@ function App() {
 	);
 }
 
-function ArticleItem(props: Record<"article", Article>) {
+interface ArticleItemProps {
+	article: Article;
+	user: User | null;
+}
+
+function ArticleItem(props: ArticleItemProps) {
+	const navigate = Route.useNavigate();
+	const favorite = useMutation(() => FavoriteArticleOptions);
+	const unfavorite = useMutation(() => UnfavoriteArticleOptions);
+
 	return (
-		<li class="space-y-2 w-full py-6 not-last:border-b border-border">
-			<div class="flex items-center justify-between">
+		<li class="space-y-2 w-full py-6 not-last:border-b border-border relative">
+			<div class="flex items-center justify-between relative z-2">
 				<div class="flex gap-2 items-center">
 					<Avatar>
 						<AvatarImage
@@ -151,9 +261,15 @@ function ArticleItem(props: Record<"article", Article>) {
 						</AvatarFallback>
 					</Avatar>
 					<div class="flex flex-col gap-1">
-						<span class="text-primary leading-none font-medium">
+						<Link
+							to="/profile/username"
+							params={{
+								username: props.article.article.author.username,
+							}}
+							class="text-primary leading-none font-medium hover:underline"
+						>
 							{props.article.article.author.username}
-						</span>
+						</Link>
 						<span class="text-muted-foreground text-xs leading-none">
 							{format(
 								new Date(props.article.article.createdAt),
@@ -169,21 +285,44 @@ function ArticleItem(props: Record<"article", Article>) {
 						props.article.article.favorited &&
 							"bg-primary text-primary-foreground",
 					)}
+					disabled={favorite.isPending || unfavorite.isPending}
+					onclick={() => {
+						if (!props.user) {
+							navigate({ to: "/login" });
+							return;
+						}
+						if (props.article.article.favorited) {
+							unfavorite.mutate({ slug: props.article.article.slug });
+						} else {
+							favorite.mutate({ slug: props.article.article.slug });
+						}
+					}}
 				>
-					<i class="ri-heart-fill text-base" />
+					<Show
+						when={unfavorite.isPending || favorite.isPending}
+						fallback={<i class="ri-heart-fill text-base" />}
+					>
+						<Swirling class="size-4" />
+					</Show>
 					<span class="tabular-nums">
 						{props.article.article.favoritesCount}
 					</span>
 				</Button>
 			</div>
-			<p class="text-xl truncate font-medium max-w-full">
+			<Link
+				to="/article/$slug"
+				params={{
+					slug: props.article.article.slug,
+				}}
+				class="text-xl truncate font-medium max-w-full before:absolute before:content-[''] before:inset-0 before:z-1 before:size-full"
+			>
 				{props.article.article.title}
-			</p>
+			</Link>
 			<p class="text-muted-foreground">{props.article.article.description}</p>
 			<div class="flex items-center justify-between">
 				<span class="text-xs text-muted-foreground">Read more...</span>
 				<Show when={props.article.article.tagList.length > 0}>
-					<div class="space-x-1">
+					<div class="space-x-1 relative z-2">
 						<For each={props.article.article.tagList}>
 							{(tag) => (
 								<span class="rounded-full border border-border px-2 py-1 pb-1.25 text-sm leading-3 text-muted-foreground">

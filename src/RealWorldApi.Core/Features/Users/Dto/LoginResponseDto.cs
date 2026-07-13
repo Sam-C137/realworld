@@ -17,6 +17,7 @@ public class LoginResponseMapper : IRegister
             .Map(dest => dest.User.Username, src => src.Profile.Username)
             .Map(dest => dest.User.Bio, src => src.Profile.Bio)
             .Map(dest => dest.User.Image, src => src.Profile.Image)
-            .Map(dest => dest.User.Token, src => MapContext.Current.Parameters["token"]);
+            .Map(dest => dest.User.Token, src => MapContext.Current.Parameters["token"])
+            .Map(dest => dest.User.CsrfToken, src => MapContext.Current.Parameters["csrfToken"]);
     }
 }
