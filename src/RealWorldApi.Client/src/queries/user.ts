@@ -5,7 +5,7 @@ import type {
 } from "@tanstack/solid-query";
 import { api, clearAuth } from "~/lib/api.ts";
 import { keys, time } from "~/lib/constants.ts";
-import type { LoginSchema } from "~/lib/validation.ts";
+import type { LoginSchema, UpdateUserSchema } from "~/lib/validation.ts";
 import type { User } from "~/types/user.ts";
 
 export const LoginOptions: MutationOptions<
@@ -73,14 +73,33 @@ export const LogoutOptions: MutationOptions<unknown> = {
 	},
 };
 
-export function CurrentUserOptionsFn(...key: unknown[]) {
-	return {
-		queryKey: [keys.Query.CurrentUser, ...key],
-		queryFn: async () =>
-			api
-				.get<Record<"user", User>>("/api/v1/user", {
-					context: { authMode: "optional" },
-				})
-				.json(),
-	} satisfies QueryOptions<Record<"user", User>>;
-}
+export const CurrentUserOptions = {
+	queryKey: [keys.Query.CurrentUser],
+	queryFn: async () =>
+		api
+			.get<Record<"user", User>>("/api/v1/user", {
+				context: { authMode: "optional" },
+			})
+			.json(),
+} satisfies QueryOptions<Record<"user", User>>;
+
+export const UpdateUserOptions: MutationOptions<
+	Record<"user", User>,
+	DefaultError,
+	typeof UpdateUserSchema.infer
+> = {
+	mutationFn: async (data) => {
+		const fd = new FormData();
+		Object.entries(data).forEach(
+			([key, value]) => void (value && fd.append(key, value)),
+		);
+		return api
+			.put<Record<"user", User>>("/api/v1/user", {
+				body: fd,
+			})
+			.json();
+	},
+	meta: {
+		invalidateQueries: [[keys.Query.CurrentUser]],
+	},
+};

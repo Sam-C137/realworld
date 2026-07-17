@@ -19,7 +19,6 @@ public class CommentsService(AppDbContext db, IHttpContextAccessor http, ILogger
             var userId = Guid.TryParse(http.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed)
                 ? parsed
                 : Guid.Empty;
-            if (userId == Guid.Empty) return Error.Unauthorized("User not authenticated");
 
             var comment = await db.Comments.Include(c => c.Author).FirstOrDefaultAsync(c => c.Id == commentId);
             if (comment is null) return Error.NotFound($"Comment with ID {commentId} not found.");
@@ -43,7 +42,6 @@ public class CommentsService(AppDbContext db, IHttpContextAccessor http, ILogger
             var userId = Guid.TryParse(http.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed)
                 ? parsed
                 : Guid.Empty;
-            if (userId == Guid.Empty) return Error.Unauthorized("User not authenticated");
 
             var articleExists = await db.Articles.AnyAsync(a => a.Slug == slug);
             if (!articleExists) return Error.NotFound($"Article with slug {slug} not found");
@@ -155,6 +153,7 @@ public class CommentsService(AppDbContext db, IHttpContextAccessor http, ILogger
     
     private async Task<bool> ComputeCommentProperties(Guid commentId, Guid userId)
     {
+        if (userId == Guid.Empty) return false;
         return await db.Comments
             .AsNoTracking()
             .Where(c => c.Id == commentId)
@@ -164,6 +163,7 @@ public class CommentsService(AppDbContext db, IHttpContextAccessor http, ILogger
     
     private async Task<Dictionary<Guid, bool>> ComputeCommentsProperties(IEnumerable<Guid> commentIds, Guid userId)
     {
+        if (userId == Guid.Empty) return new Dictionary<Guid, bool>();
         return await db.Comments
             .AsNoTracking()
             .Where(c => commentIds.Contains(c.Id))

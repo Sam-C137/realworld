@@ -10,6 +10,7 @@ export const Route = createFileRoute("/logout")({
 				.getMutationCache()
 				.build(queryClient, LogoutOptions)
 				.execute();
+			void queryClient.invalidateQueries();
 			queryClient.clear();
 		} catch (e) {
 			void e; // noop on logout error

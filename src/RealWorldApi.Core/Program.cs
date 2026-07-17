@@ -24,12 +24,12 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllerConfig();
 builder.Services.AddProblemDetails();
 
-builder.Services.AddHostedService<SessionCleanupWorker>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddHostedService<SessionCleanupService>();
 
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<EmailRateLimitService>();
-builder.Services.AddScoped<SessionCleanupService>();
 builder.Services.AddScoped<ITagsService, TagsService>();
 builder.Services.AddScoped<TagsCacheService>();
 builder.Services.AddScoped<IArticlesService, ArticlesService>();

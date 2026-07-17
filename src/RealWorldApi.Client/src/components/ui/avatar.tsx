@@ -36,7 +36,7 @@ const AvatarImage = <T extends ValidComponent = "img">(
 	const [local, others] = splitProps(props as AvatarImageProps, ["class"]);
 	return (
 		<ImagePrimitive.Img
-			class={cn("aspect-square size-full", local.class)}
+			class={cn("aspect-square size-full object-cover", local.class)}
 			{...others}
 		/>
 	);

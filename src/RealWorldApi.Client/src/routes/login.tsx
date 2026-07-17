@@ -34,6 +34,7 @@ function LoginPage() {
 			try {
 				setError(null);
 				await login.mutateAsync({ user: value });
+				await qc.invalidateQueries();
 				qc.clear();
 				await navigate({
 					to: "/",
@@ -128,7 +129,7 @@ function LoginPage() {
 				</FieldGroup>
 				<Button
 					type="submit"
-					class="float-right text-lg rounded-sm"
+					class="float-right text-lg rounded-xs"
 					disabled={form.state.isSubmitting}
 				>
 					Sign In

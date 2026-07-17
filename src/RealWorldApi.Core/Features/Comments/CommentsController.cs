@@ -16,11 +16,9 @@ public class CommentsController(ICommentsService commentsService): BaseControlle
     /// <param name="slug">The slug of the article containing the comment.</param>
     /// <param name="request">Pagination cursor</param>
     /// <returns></returns>
-    [Authorize]
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CursorPaginatedResponse<GetCommentResponseDto>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetComments([FromRoute] string slug, [FromQuery] GetCommentsRequestDto request)
     {
@@ -42,11 +40,9 @@ public class CommentsController(ICommentsService commentsService): BaseControlle
     /// <param name="slug">The slug of the article containing the comment.</param>
     /// <param name="commentId">The ID of the comment to retrieve.</param>
     /// <returns />
-    [Authorize]
     [HttpGet("{commentId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GetCommentResponseDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetComment([FromRoute] string slug, [FromRoute] Guid commentId)
     {
         return await commentsService.GetComment(commentId)

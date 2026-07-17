@@ -157,7 +157,7 @@ function RegisterPage() {
 				</FieldGroup>
 				<Button
 					type="submit"
-					class="float-right text-lg rounded-sm"
+					class="float-right text-lg rounded-xs"
 					disabled={form.state.isSubmitting}
 				>
 					Sign Up

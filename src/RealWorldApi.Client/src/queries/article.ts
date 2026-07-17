@@ -2,6 +2,7 @@ import type { MutationOptions, QueryOptions } from "@tanstack/solid-query";
 import { api } from "~/lib/api.ts";
 import { keys, time } from "~/lib/constants.ts";
 import { sleep } from "~/lib/utils.ts";
+import type { CreateArticleSchema } from "~/lib/validation.ts";
 import type { Article } from "~/types/article.ts";
 import type {
 	Paginated,
@@ -60,14 +61,12 @@ export function GetArticleOptionsFn(slug: string) {
 }
 
 export const FavoriteArticleOptions: MutationOptions<
-	Record<"article", Article>,
+	Article,
 	unknown,
 	Record<"slug", string>
 > = {
 	mutationFn: async ({ slug }) => {
-		return api
-			.post<Record<"article", Article>>(`/api/v1/articles/${slug}/favorite`)
-			.json();
+		return api.post<Article>(`/api/v1/articles/${slug}/favorite`).json();
 	},
 	meta: {
 		invalidateQueries: (_, _e, { slug }: Record<"slug", string>) => [
@@ -79,17 +78,73 @@ export const FavoriteArticleOptions: MutationOptions<
 };
 
 export const UnfavoriteArticleOptions: MutationOptions<
-	Record<"article", Article>,
+	Article,
 	unknown,
 	Record<"slug", string>
 > = {
 	mutationFn: async ({ slug }) => {
-		return api
-			.delete<Record<"article", Article>>(`/api/v1/articles/${slug}/favorite`)
-			.json();
+		return api.delete<Article>(`/api/v1/articles/${slug}/favorite`).json();
 	},
 	meta: {
 		invalidateQueries: (_, _e, { slug }: Record<"slug", string>) => [
+			[keys.Query.Article, slug],
+			[keys.Query.Articles],
+			[keys.Query.Feed],
+		],
+	},
+};
+
+export const CreateArticleOptions: MutationOptions<
+	Article,
+	unknown,
+	typeof CreateArticleSchema.inferOut
+> = {
+	mutationFn: async (data) => {
+		return api
+			.post<Article>("/api/v1/articles", {
+				json: {
+					article: data,
+				},
+			})
+			.json();
+	},
+	meta: {
+		invalidateQueries: [[keys.Query.Articles]],
+	},
+};
+
+export const EditArticleOptions: MutationOptions<
+	Article,
+	unknown,
+	[string, typeof CreateArticleSchema.inferOut]
+> = {
+	mutationFn: async ([slug, data]) => {
+		return api
+			.put<Article>(`/api/v1/articles/${slug}`, {
+				json: {
+					article: data,
+				},
+			})
+			.json();
+	},
+	meta: {
+		invalidateQueries: (_, _e, [slug]: [string]) => [
+			[keys.Query.Article, slug],
+			[keys.Query.Articles],
+			[keys.Query.Feed],
+		],
+	},
+};
+
+export const DeleteArticleOptions: MutationOptions<unknown, unknown, string> = {
+	mutationFn: async (slug) => {
+		return Promise.all([
+			api.delete(`/api/v1/articles/${slug}`),
+			sleep(time.Second * 2),
+		]);
+	},
+	meta: {
+		invalidateQueries: (_, _e, slug: string) => [
 			[keys.Query.Article, slug],
 			[keys.Query.Articles],
 			[keys.Query.Feed],

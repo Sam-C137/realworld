@@ -165,10 +165,10 @@ public class CommentsIntegrationTest(IntegrationTestContainerFixture fixture, IT
         var anonymous = CreateHttpsClient();
 
         var response = await anonymous.GetAsync($"/api/v1/articles/{article.Article.Slug}/comments");
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         response = await anonymous.GetAsync($"/api/v1/articles/{article.Article.Slug}/comments/{comment.Id}");
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         response = await anonymous.PostAsJsonAsync($"/api/v1/articles/{article.Article.Slug}/comments",
             new CreateCommentRequestDto

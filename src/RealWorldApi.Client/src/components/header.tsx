@@ -1,7 +1,12 @@
 import { useColorMode } from "@kobalte/core";
 import { useQuery } from "@tanstack/solid-query";
-import { Link, useLocation } from "@tanstack/solid-router";
+import { Link } from "@tanstack/solid-router";
 import { Show } from "solid-js";
+import {
+	Avatar,
+	AvatarFallback,
+	AvatarImage,
+} from "~/components/ui/avatar.tsx";
 import { Button } from "~/components/ui/button";
 import {
 	DropdownMenu,
@@ -9,11 +14,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { CurrentUserOptionsFn } from "~/queries/user.ts";
+import { CurrentUserOptions } from "~/queries/user.ts";
 
 export default function Header() {
-	const location = useLocation();
-	const user = useQuery(() => CurrentUserOptionsFn(location().pathname));
+	const user = useQuery(() => CurrentUserOptions);
+
 	return (
 		<header class="py-4 px-4 sm:px-10">
 			<nav class="flex items-center justify-between max-w-7xl mx-auto">
@@ -52,12 +57,34 @@ export default function Header() {
 						}
 					>
 						<Link
+							to="/editor"
+							class="text-muted-foreground"
+							activeProps={{ class: "text-foreground!" }}
+							preload={false}
+						>
+							New Article
+						</Link>
+						<Link
 							to="/logout"
 							class="text-muted-foreground"
 							activeProps={{ class: "text-foreground!" }}
 							preload={false}
 						>
 							Sign Out
+						</Link>
+						<Link
+							to="/settings"
+							class="flex items-center gap-2 text-muted-foreground"
+							activeProps={{ class: "text-foreground!" }}
+							preload={false}
+						>
+							<Avatar class="size-8">
+								<AvatarImage src={user.data?.user.image ?? undefined} />
+								<AvatarFallback class="capitalize text-[#3a4551] darK:text-[#1a1f2e]">
+									{user.data?.user.username.charAt(0)}
+								</AvatarFallback>
+							</Avatar>
+							{user.data?.user.username}
 						</Link>
 					</Show>
 					<ThemeToggle />

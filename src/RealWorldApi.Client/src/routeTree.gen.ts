@@ -13,7 +13,9 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProfileUsernameRouteImport } from './routes/profile/username'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as EditorIndexRouteImport } from './routes/editor/index'
+import { Route as ProfileUsernameRouteImport } from './routes/profile/$username'
 import { Route as DemoFormRouteImport } from './routes/demo.form'
 import { Route as ArticleSlugRouteImport } from './routes/article/$slug'
 
@@ -37,9 +39,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditorIndexRoute = EditorIndexRouteImport.update({
+  id: '/editor/',
+  path: '/editor/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
-  id: '/profile/username',
-  path: '/profile/username',
+  id: '/profile/$username',
+  path: '/profile/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoFormRoute = DemoFormRouteImport.update({
@@ -60,7 +72,9 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/article/$slug': typeof ArticleSlugRoute
   '/demo/form': typeof DemoFormRoute
-  '/profile/username': typeof ProfileUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRoute
+  '/editor/': typeof EditorIndexRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,7 +83,9 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/article/$slug': typeof ArticleSlugRoute
   '/demo/form': typeof DemoFormRoute
-  '/profile/username': typeof ProfileUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRoute
+  '/editor': typeof EditorIndexRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,7 +95,9 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/article/$slug': typeof ArticleSlugRoute
   '/demo/form': typeof DemoFormRoute
-  '/profile/username': typeof ProfileUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRoute
+  '/editor/': typeof EditorIndexRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,7 +108,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/article/$slug'
     | '/demo/form'
-    | '/profile/username'
+    | '/profile/$username'
+    | '/editor/'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -99,7 +119,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/article/$slug'
     | '/demo/form'
-    | '/profile/username'
+    | '/profile/$username'
+    | '/editor'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -108,7 +130,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/article/$slug'
     | '/demo/form'
-    | '/profile/username'
+    | '/profile/$username'
+    | '/editor/'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +143,8 @@ export interface RootRouteChildren {
   ArticleSlugRoute: typeof ArticleSlugRoute
   DemoFormRoute: typeof DemoFormRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
+  EditorIndexRoute: typeof EditorIndexRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -151,10 +177,24 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile/username': {
-      id: '/profile/username'
-      path: '/profile/username'
-      fullPath: '/profile/username'
+    '/settings/': {
+      id: '/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editor/': {
+      id: '/editor/'
+      path: '/editor'
+      fullPath: '/editor/'
+      preLoaderRoute: typeof EditorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/$username': {
+      id: '/profile/$username'
+      path: '/profile/$username'
+      fullPath: '/profile/$username'
       preLoaderRoute: typeof ProfileUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -183,6 +223,8 @@ const rootRouteChildren: RootRouteChildren = {
   ArticleSlugRoute: ArticleSlugRoute,
   DemoFormRoute: DemoFormRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
+  EditorIndexRoute: EditorIndexRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

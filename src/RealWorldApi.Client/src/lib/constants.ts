@@ -29,5 +29,7 @@ export const keys = {
 		Article: "article",
 		Feed: "feed",
 		Tags: "tags",
+		Comments: "comments",
+		Profile: "profile",
 	},
 } as const;
