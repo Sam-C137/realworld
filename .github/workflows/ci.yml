@@ -123,6 +123,13 @@ jobs:
           PREVIOUS_SOURCE: ${{ runner.temp }}/realworld-previous
         run: git worktree add --detach "$PREVIOUS_SOURCE" HEAD^
 
+      - name: Restore migration projects
+        env:
+          PREVIOUS_SOURCE: ${{ runner.temp }}/realworld-previous
+        run: |
+          dotnet restore "$PREVIOUS_SOURCE/src/RealWorldApi.Core/RealWorldApi.Core.csproj"
+          dotnet restore src/RealWorldApi.Core/RealWorldApi.Core.csproj
+
       - name: Create previous deployed schema
         env:
           PREVIOUS_SOURCE: ${{ runner.temp }}/realworld-previous
