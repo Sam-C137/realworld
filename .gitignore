@@ -44,6 +44,7 @@ temp/
 !.env*.example
 !.env.template
 !.env*.template
+!.env.test
 
 # --- Archives / binaries ---
 *.7z
@@ -180,3 +181,4 @@ override.tf.json
 
 # --- Project Specific Spinn-offs ---
 src/RealWorldApi.Core/wwwroot/
+!/.env.test

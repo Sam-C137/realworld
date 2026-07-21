@@ -1,0 +1,91 @@
+name: realworld-dotnet
+
+services:
+  api:
+    image: ${RW_DOTNET_IMAGE}:${RW_DOTNET_IMAGE_TAG:-dotnet-10-aspnetcore}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      AllowedHosts: ${RW_DOTNET_ALLOWED_HOSTS:-*};localhost
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${APP_DB_USER};Password=${APP_DB_PASSWORD};Include Error Detail=false
+      ConnectionStrings__Redis: redis:6379,abortConnect=false
+      Database__ApplyMigrationsOnStartup: "true"
+      Database__SeedDatabaseOnStartup: "false"
+      Cors__AllowedOrigins__0: ${RW_DOTNET_APP_ORIGIN}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${RW_DOTNET_APP_ORIGIN}
+      Jwt__Audience: ${RW_DOTNET_APP_ORIGIN}
+      R2__AccessKey: ${R2_ACCESS_KEY}
+      R2__SecretKey: ${R2_SECRET_KEY}
+      R2__Endpoint: ${R2_ENDPOINT}
+      R2__BucketName: ${R2_BUCKET_NAME}
+      R2__Domain: ${R2_DOMAIN}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    expose:
+      - "8080"
+      - "8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      APP_DB_USER: ${APP_DB_USER:-realworld_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      GATEWAY_DB_USER: ${GATEWAY_DB_USER:-realworld_reader}
+      GATEWAY_DB_PASSWORD: ${GATEWAY_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/init-database-roles.sh:/docker-entrypoint-initdb.d/20-init-database-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  gateway:
+    image: ${DRIZZLE_GATEWAY_IMAGE:-ghcr.io/drizzle-team/gateway:latest}
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      PORT: "4983"
+      STORE_PATH: /app
+      MASTERPASS: ${GATEWAY_MASTERPASS}
+      DATABASE_URL_realworld: postgresql://${GATEWAY_DB_USER:-realworld_reader}:${GATEWAY_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:${GATEWAY_BIND_PORT:-4983}:4983"
+    volumes:
+      - gateway_data:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  gateway_data:

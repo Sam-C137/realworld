@@ -1,0 +1,160 @@
+name: RealWorld .NET CI
+
+on:
+  push:
+    branches:
+      - dotnet-10-aspnetcore
+
+concurrency:
+  group: rw-dotnet-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Build and test .NET
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: rw-dotnet-nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            rw-dotnet-nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore RealWorldApi.slnx
+
+      - name: Build
+        run: dotnet build RealWorldApi.slnx --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test RealWorldApi.slnx --configuration Release --no-build --logger "console;verbosity=normal"
+
+  frontend:
+    name: Check Solid client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/RealWorldApi.Client
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: src/RealWorldApi.Client/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting and lint rules
+        run: pnpm check
+
+      - name: Run client tests
+        run: pnpm exec vitest run --passWithNoTests
+
+      - name: Build production client
+        run: pnpm build
+
+  migration-upgrade:
+    name: Upgrade previous schema
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: realworld_migration_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d realworld_migration_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=realworld_migration_ci;Username=postgres;Password=postgres
+    steps:
+      - name: Check out source and previous commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: rw-dotnet-nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            rw-dotnet-nuget-${{ runner.os }}-
+
+      - name: Install EF Core CLI
+        run: dotnet tool install --global dotnet-ef --version 10.0.7
+
+      - name: Materialize previous commit
+        env:
+          PREVIOUS_SOURCE: ${{ runner.temp }}/realworld-previous
+        run: git worktree add --detach "$PREVIOUS_SOURCE" HEAD^
+
+      - name: Create previous deployed schema
+        env:
+          PREVIOUS_SOURCE: ${{ runner.temp }}/realworld-previous
+        run: >-
+          dotnet ef database update
+          --project "$PREVIOUS_SOURCE/src/RealWorldApi.Infrastructure/RealWorldApi.Infrastructure.csproj"
+          --startup-project "$PREVIOUS_SOURCE/src/RealWorldApi.Core/RealWorldApi.Core.csproj"
+          --configuration Release
+
+      - name: Apply current migrations over previous schema
+        run: >-
+          dotnet ef database update
+          --project src/RealWorldApi.Infrastructure/RealWorldApi.Infrastructure.csproj
+          --startup-project src/RealWorldApi.Core/RealWorldApi.Core.csproj
+          --configuration Release
+
+      - name: Reject model changes without a migration
+        run: >-
+          dotnet ef migrations has-pending-model-changes
+          --project src/RealWorldApi.Infrastructure/RealWorldApi.Infrastructure.csproj
+          --startup-project src/RealWorldApi.Core/RealWorldApi.Core.csproj
+          --configuration Release
+
+  deploy:
+    name: Publish deployment image
+    needs:
+      - backend
+      - frontend
+      - migration-upgrade
+    uses: ./.github/workflows/deploy.yml
+    with:
+      commit_sha: ${{ github.sha }}
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      RW_DOTNET_DEPLOY_WEBHOOK_URL: ${{ secrets.RW_DOTNET_DEPLOY_WEBHOOK_URL }}

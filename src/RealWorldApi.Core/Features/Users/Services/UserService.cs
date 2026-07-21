@@ -95,6 +95,7 @@ public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStor
             await using var input = image.OpenReadStream();
             using var loaded = await Image.LoadAsync(input);
 
+            // if image is larger than 1024 * 1024 (arbitrary for avatar) resize down to 1024 * 1024
             if (loaded.Width > 1024 || loaded.Height > 1024)
             {
                 loaded.Mutate(ctx => ctx.Resize(new ResizeOptions
@@ -134,10 +135,11 @@ public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStor
 
         for (var edge = 768; edge >= 256; edge -= 256)
         {
+            var e = edge;
             using var clone = image.Clone(ctx => ctx.Resize(new ResizeOptions
             {
                 Mode = ResizeMode.Max,
-                Size = new Size(edge, edge)
+                Size = new Size(e, e)
             }));
             var bytes = await EncodeWebp(clone, 66);
             if (bytes.Length <= UpdateUserRequestValidator.MaxFinalImageSizeBytes) return bytes;
