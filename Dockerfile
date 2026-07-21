@@ -21,13 +21,11 @@ COPY Directory.Packages.props RealWorldApi.slnx ./
 COPY src/RealWorldApi.Core/RealWorldApi.Core.csproj ./src/RealWorldApi.Core/
 COPY src/RealWorldApi.Infrastructure/RealWorldApi.Infrastructure.csproj ./src/RealWorldApi.Infrastructure/
 COPY src/RealWorldApi.ServiceDefaults/RealWorldApi.ServiceDefaults.csproj ./src/RealWorldApi.ServiceDefaults/
-RUN --mount=type=cache,id=nuget-packages,target=/root/.nuget/packages \
-    dotnet restore src/RealWorldApi.Core/RealWorldApi.Core.csproj
+RUN dotnet restore src/RealWorldApi.Core/RealWorldApi.Core.csproj
 
 COPY src ./src
 COPY --from=client-build /src/src/RealWorldApi.Core/wwwroot ./src/RealWorldApi.Core/wwwroot
-RUN --mount=type=cache,id=nuget-packages,target=/root/.nuget/packages \
-    dotnet publish src/RealWorldApi.Core/RealWorldApi.Core.csproj \
+RUN dotnet publish src/RealWorldApi.Core/RealWorldApi.Core.csproj \
     --configuration Release \
     --no-restore \
     --output /app/publish \
