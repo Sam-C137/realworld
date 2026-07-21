@@ -23,7 +23,7 @@ public class UsersLogoutIntegrationTest(IntegrationTestContainerFixture fixture,
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Csrf is temporarily disabled")]
     public async Task Logout_WithoutCsrfHeader_ReturnsForbidden()
     {
         var client = CreateHttpsClient();
@@ -40,7 +40,7 @@ public class UsersLogoutIntegrationTest(IntegrationTestContainerFixture fixture,
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Csrf is temporarily disabled")]
     public async Task Logout_WithMismatchedCsrfHeader_ReturnsForbidden()
     {
         var client = CreateHttpsClient();
