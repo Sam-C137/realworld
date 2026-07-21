@@ -49,7 +49,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors("Frontend");
 app.UseRateLimiter();
-app.UseMiddleware<CsrfValidationMiddleware>(); 
+// app.UseMiddleware<CsrfValidationMiddleware>(); 
 app.MapControllers();
 app.MapOpenApi();
 app.MapScalarApiReference("/docs");
