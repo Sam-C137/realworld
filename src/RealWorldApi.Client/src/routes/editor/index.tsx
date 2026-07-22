@@ -212,15 +212,13 @@ function EditorPage() {
 										name={field().name}
 										value={field().state.value.join(", ")}
 										onBlur={field().handleBlur}
-										onChange={(e) =>
-											field().handleChange((prev) => [
-												...prev,
-												...e.target.value
-													.split(",")
-													.map((v) => v.trim())
-													.filter(Boolean),
-											])
-										}
+										onChange={(e) => {
+											const tags = e.target.value
+												.split(",")
+												.map((v) => v.trim())
+												.filter(Boolean);
+											field().handleChange(Array.from(new Set(tags)));
+										}}
 										aria-invalid={isInvalid}
 										placeholder="comma, separated, tags"
 										type="text"

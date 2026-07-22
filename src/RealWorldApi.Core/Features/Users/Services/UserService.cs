@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ErrorOr;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using RealWorldApi.Core.Features.Articles.Services;
 using RealWorldApi.Core.Features.Users.Dto;
 using RealWorldApi.Infrastructure.Data;
 using RealWorldApi.Infrastructure.ObjectStorage;
@@ -11,7 +12,7 @@ using SixLabors.ImageSharp.Processing;
 
 namespace RealWorldApi.Core.Features.Users.Services;
 
-public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStorageService r2)
+public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStorageService r2, ArticleCacheService acs)
     : IUserService
 {
     public async Task<ErrorOr<LoginResponseDto>> GetUser()
@@ -75,6 +76,7 @@ public class UserService(AppDbContext db, IHttpContextAccessor http, IObjectStor
         }
 
         await db.SaveChangesAsync();
+        await acs.BumpVersionAsync();
 
         return user
             .BuildAdapter()

@@ -41,7 +41,8 @@ export const UpdateUserSchema = type({
 				)
 				.describe("a valid image file (jpeg, png, webp)")
 				.narrow((f) => f.size > 0 && f.size < size.MB * 5)
-				.describe("must not be empty or more than 5MB"),
+				.describe("must not be empty or more than 5MB")
+				.configure({ actual: "" }),
 		)
 		.pipe((f) => (f instanceof File ? f : undefined)),
 });
