@@ -62,7 +62,7 @@ The root `Dockerfile` builds the Solid client first, copies it into the API's
 `wwwroot`, publishes the API, and produces one non-root ASP.NET runtime image.
 Aspire remains the local development orchestrator; `compose.yml` is the
 production contract for the API, PostgreSQL, Redis, and optional database
-browser.
+browser. It also hosts a standalone Aspire Dashboard for live telemetry.
 
 ### Environment
 
@@ -85,6 +85,30 @@ PostgreSQL and Redis have no host port mappings.
 The API applies EF Core migrations during startup and aborts startup if a
 migration fails. It never seeds data in Production. Keep the API at one replica
 while startup migration is enabled.
+
+### Aspire Dashboard
+
+The standalone Aspire Dashboard receives the API's structured logs, traces,
+and metrics over OTLP/gRPC on the internal Compose network. Generate its OTLP
+ingestion key with `openssl rand -hex 32`, store it in Dokploy as
+`ASPIRE_DASHBOARD_OTLP_API_KEY`, and redeploy.
+
+Assign the dashboard a separate Dokploy domain with service name
+`aspire-dashboard` and container port `18888`. Do not assign a domain or host
+port to its OTLP port `18889`. The OTLP endpoint requires the API key through
+the `x-otlp-api-key` header, while the dashboard UI retains its default browser
+token authentication. Retrieve the UI login token from the dashboard container
+logs after deployment. Never enable anonymous dashboard access in Production.
+The browser token is regenerated when Dokploy replaces the dashboard container,
+so retrieve the new token from its logs after a restart.
+
+The dashboard keeps telemetry in memory: restarts discard its history and old
+telemetry is evicted when limits are reached. Treat it as a live diagnostic
+tool, not durable monitoring or alerting. For long-term retention, place an
+OpenTelemetry Collector in front of a persistent backend later; the API's
+existing OpenTelemetry instrumentation can remain unchanged. Pin
+`ASPIRE_DASHBOARD_IMAGE` to a tested version or digest before relying on it in
+Production.
 
 ### Drizzle Gateway
 
